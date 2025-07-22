@@ -20,8 +20,8 @@ func NewJSONStorage(config permission.StorageConfig) *JSONStorage {
 	}
 }
 
-// Close implements Storage.
-func (j *JSONStorage) Close() error {
+// Load implements Storage.
+func (j *JSONStorage) Load() (*permission.PermissionData, error) {
 	panic("unimplemented")
 }
 
@@ -30,12 +30,12 @@ func (j *JSONStorage) Exists() bool {
 	panic("unimplemented")
 }
 
-// Load implements Storage.
-func (j *JSONStorage) Load() (*permission.PermissionData, error) {
+// Save implements Storage.
+func (j *JSONStorage) Save(data *permission.PermissionData) error {
 	panic("unimplemented")
 }
 
-// Save implements Storage.
-func (j *JSONStorage) Save(data *permission.PermissionData) error {
+// Close implements Storage.
+func (j *JSONStorage) Close() error {
 	panic("unimplemented")
 }
