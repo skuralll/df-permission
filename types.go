@@ -34,3 +34,9 @@ type Group struct {
 	Name        string   `json:"name"`        // グループ名
 	Permissions []string `json:"permissions"` // グループに割り当てられた権限のリスト
 }
+
+// ストレージファイルの設定
+type StorageConfig struct {
+	// 保存するファイルのパス
+	Path string
+}
