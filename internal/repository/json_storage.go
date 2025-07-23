@@ -50,7 +50,7 @@ func (j *JSONStorage) Load() (*permission.PermissionData, error) {
 		return nil, NewStorageError("validation", err.Error())
 	}
 
-	return nil, nil
+	return &permData, nil
 }
 
 func (j *JSONStorage) Exists() bool {
