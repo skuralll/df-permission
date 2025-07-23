@@ -61,7 +61,6 @@ func (j *JSONStorage) Exists() bool {
 	return err == nil
 }
 
-// Save implements Storage.
 func (j *JSONStorage) Save(data *permission.PermissionData) error {
 	j.mutex.Lock()
 	defer j.mutex.Unlock()
@@ -107,9 +106,9 @@ func (j *JSONStorage) Save(data *permission.PermissionData) error {
 	return nil
 }
 
-// Close implements Storage.
 func (j *JSONStorage) Close() error {
-	panic("unimplemented")
+	// JSONStorageは特にリソースを保持していないため、特別なクリーンアップは不要
+	return nil
 }
 
 // ディスクに強制的に書き込む
