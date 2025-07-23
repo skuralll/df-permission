@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"encoding/json"
+	"os"
 	"sync"
 
 	permission "github.com/skuralll/df-permission"
@@ -20,13 +22,41 @@ func NewJSONStorage(config permission.StorageConfig) *JSONStorage {
 	}
 }
 
-// Load implements Storage.
 func (j *JSONStorage) Load() (*permission.PermissionData, error) {
-	panic("unimplemented")
+	j.mutex.RLock()
+	defer j.mutex.RUnlock()
+
+	// ストレージファイルが存在しない場合はデフォルトのPermissionDataを返す
+	if !j.Exists() {
+		return NewDefaultPermissionData(), nil
+	}
+
+	// ファイルからデータを読み込む
+	data, err := os.ReadFile(j.config.Path)
+	if err != nil {
+		return nil, NewStorageError("load", err.Error())
+	}
+
+	// データをPermissionDataに変換
+	var permData permission.PermissionData
+	if err := json.Unmarshal(data, &permData); err != nil {
+		return nil, NewStorageError("parse", err.Error())
+	}
+
+	// バリデーション
+	if err := ValidatePermissionData(&permData); err != nil {
+		return nil, NewStorageError("validation", err.Error())
+	}
+
+	return nil, nil
 }
 
 func (j *JSONStorage) Exists() bool {
-	panic("unimplemented")
+	j.mutex.RLock()
+	defer j.mutex.RUnlock()
+
+	_, err := os.Stat(j.config.Path)
+	return err == nil
 }
 
 // Save implements Storage.
