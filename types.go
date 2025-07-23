@@ -6,6 +6,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// 権限データバージョン
+const PermissionDataVersion = "1.0"
+
 // 権限設定メタデータ
 type Metadata struct {
 	Version   string    `json:"version"`    // バージョン情報
