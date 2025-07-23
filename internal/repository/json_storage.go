@@ -25,7 +25,6 @@ func (j *JSONStorage) Load() (*permission.PermissionData, error) {
 	panic("unimplemented")
 }
 
-// Exists implements Storage.
 func (j *JSONStorage) Exists() bool {
 	panic("unimplemented")
 }
