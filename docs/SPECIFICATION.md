@@ -15,16 +15,16 @@ Minecraft Bedrock Edition Dragonflyサーバー向けのシンプルな権限管
 ## プロジェクト構造
 ```
 df-permission/
-├── permission.go      # Public API
+├── permission.go      # Public API (Manager取得関数など最小限のみ公開、あとはinternalに隠蔽)
 ├── types.go          # 公開データ型
 ├── options.go        # オプションパターン
 ├── errors.go         # 公開エラー定義
 │
 └── internal/
-    ├── domain/       # ビジネスロジック層
-    ├── repository/   # データアクセス層  
-    ├── application/  # アプリケーション層
-    ├── dragonfly/    # Dragonfly統合層
+    ├── domain/       # ビジネスロジック層 (権限システム本体)
+    ├── repository/   # データアクセス層 (データR&W)
+    ├── application/  # アプリケーション層 (Managerとpublic API)
+    ├── dragonfly/    # Dragonfly統合層 (コマンドやイベントハンドラ)
     └── shared/
         ├── errors.go # 内部エラー定義
         └── utils.go  # ユーティリティ
