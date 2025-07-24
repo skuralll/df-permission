@@ -133,3 +133,34 @@ func (pm *PermissionMatcher) validatePermissionString(permission string) bool {
 
 	return true
 }
+
+// 計算量の少ないパターン順に並べ替える
+// 完全一致 -> プレフィックス -> ワイルドカード
+func (pm *PermissionMatcher) OptimizePatterns(patterns []string) []string {
+	if len(patterns) <= 1 {
+		return patterns
+	}
+
+	optimized := make([]string, 0, len(patterns))
+	wildcards := make([]string, 0)
+	prefixes := make([]string, 0)
+	exacts := make([]string, 0)
+
+	// パターン別に分類
+	for _, pattern := range patterns {
+		if pattern == "*" {
+			wildcards = append(wildcards, pattern)
+		} else if strings.HasSuffix(pattern, ".*") {
+			prefixes = append(prefixes, pattern)
+		} else {
+			exacts = append(exacts, pattern)
+		}
+	}
+
+	// 計算量の少ない順に結合
+	optimized = append(optimized, exacts...)
+	optimized = append(optimized, prefixes...)
+	optimized = append(optimized, wildcards...)
+
+	return optimized
+}
