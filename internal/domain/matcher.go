@@ -52,6 +52,7 @@ func (pm *PermissionMatcher) MatchAny(patterns []string, target string) bool {
 }
 
 // 複数のパターンに対して、いずれかにマッチする場合、マッチしたパターンとそのタイプを返す
+// 追加でマッチのタイプを取得する処理があるため、パフォーマンスに差がある
 func (pm *PermissionMatcher) MatchAnyDetailed(patterns []string, target string) (matched bool, matchedPattern string, matchType MatchType) {
 	for _, pattern := range patterns {
 		if pm.Match(pattern, target) {
