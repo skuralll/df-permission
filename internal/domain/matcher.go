@@ -85,7 +85,7 @@ func (pm *PermissionMatcher) validatePermissionString(permission string) bool {
 		return false
 	}
 
-	// Check each character
+	// 文字をチェック
 	for _, r := range permission {
 		if !((r >= 'a' && r <= 'z') ||
 			(r >= 'A' && r <= 'Z') ||
@@ -95,13 +95,12 @@ func (pm *PermissionMatcher) validatePermissionString(permission string) bool {
 		}
 	}
 
-	// Additional checks
-	// Cannot start or end with dot
+	// ドットで始まったり終わったりしてはいけない
 	if strings.HasPrefix(permission, ".") || strings.HasSuffix(permission, ".") {
 		return false
 	}
 
-	// Cannot have consecutive dots
+	// 連続したドットがないかチェック
 	if strings.Contains(permission, "..") {
 		return false
 	}
