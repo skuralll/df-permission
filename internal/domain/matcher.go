@@ -5,6 +5,17 @@ import "strings"
 // Permission文字列のパターンマッチングを扱う
 type PermissionMatcher struct{}
 
+// パターンマッチのタイプ
+type MatchType int
+
+const (
+	GlobalWildcard MatchType = iota
+	ExactMatch
+	PrefixWildcard
+	UnknownMatch
+)
+
+// PermissionMatcherの新しいインスタンスを作成
 func NewPermissionMatcher() *PermissionMatcher {
 	return &PermissionMatcher{}
 }
@@ -38,4 +49,18 @@ func (pm *PermissionMatcher) MatchAny(patterns []string, target string) bool {
 		}
 	}
 	return false
+}
+
+// マッチの種類を返す
+func (pm *PermissionMatcher) getMatchType(pattern, target string) MatchType {
+	if pattern == "*" {
+		return GlobalWildcard
+	}
+	if pattern == target {
+		return ExactMatch
+	}
+	if strings.HasSuffix(pattern, ".*") {
+		return PrefixWildcard
+	}
+	return UnknownMatch
 }
