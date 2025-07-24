@@ -10,20 +10,20 @@ func TestPermissionMatcher_Match(t *testing.T) {
 		target  string
 		want    bool
 	}{
-		{"*", "anything", true},
-		{"exact", "exact", true},
-		{"exact", "different", false},
-		{"world.*", "world.build", true},
-		{"world.*", "world", true},
-		{"world.*", "other.build", false},
-		{"moderation.admin.*", "moderation.admin.kick", true},
-		{"moderation.admin.*", "moderation.admin.ban.permanent", true},
-		{"moderation.admin.*", "moderation.admin", true},
-		{"moderation.admin.*", "moderation.user.kick", false},
-		{"server.config.database.*", "server.config.database.read", true},
-		{"server.config.database.*", "server.config.network.read", false},
-		{"chat.color.rainbow", "chat.color.rainbow", true},
-		{"chat.color.rainbow", "chat.color.red", false},
+		{"*", "anything", true},                                           // グローバルワイル드カード（全権限を許可）
+		{"exact", "exact", true},                                          // 完全一致
+		{"exact", "different", false},                                     // 完全一致でマッチしない
+		{"world.*", "world.build", true},                                  // プレフィックスワイルドカードでマッチ
+		{"world.*", "world", true},                                        // プレフィックスワイルドカードで基底マッチ
+		{"world.*", "other.build", false},                                 // プレフィックスワイルドカードでマッチしない
+		{"moderation.admin.*", "moderation.admin.kick", true},             // 長いプレフィックスでマッチ
+		{"moderation.admin.*", "moderation.admin.ban.permanent", true},    // ネストした長いプレフィックスでマッチ
+		{"moderation.admin.*", "moderation.admin", true},                  // 長いプレフィックスで基底マッチ
+		{"moderation.admin.*", "moderation.user.kick", false},             // 長いプレフィックスでマッチしない
+		{"server.config.database.*", "server.config.database.read", true}, // データベース設定権限でマッチ
+		{"server.config.database.*", "server.config.network.read", false}, // 異なる設定権限でマッチしない
+		{"chat.color.rainbow", "chat.color.rainbow", true},                // 長い完全一致
+		{"chat.color.rainbow", "chat.color.red", false},                   // 長い完全一致でマッチしない
 	}
 
 	for _, tt := range tests {
@@ -41,13 +41,13 @@ func TestPermissionMatcher_ValidatePattern(t *testing.T) {
 		pattern string
 		want    bool
 	}{
-		{"", false},
-		{"*", true},
-		{"world.build", true},
-		{"world.*", true},
-		{".invalid", false},
-		{"invalid.", false},
-		{"invalid..double", false},
+		{"", false},                // 空文字列は無効
+		{"*", true},                // グローバルワイルドカードは有効
+		{"world.build", true},      // 有効な権限文字列
+		{"world.*", true},          // 有効なプレフィックスワイルドカード
+		{".invalid", false},        // ドットで始まる文字列は無効
+		{"invalid.", false},        // ドットで終わる文字列は無効
+		{"invalid..double", false}, // 連続したドットは無効
 	}
 
 	for _, tt := range tests {
