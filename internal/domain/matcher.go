@@ -29,3 +29,13 @@ func (pm *PermissionMatcher) Match(pattern, target string) bool {
 
 	return false
 }
+
+// 複数のパターンに対して、いずれかにマッチするかを確認
+func (pm *PermissionMatcher) MatchAny(patterns []string, target string) bool {
+	for _, pattern := range patterns {
+		if pm.Match(pattern, target) {
+			return true
+		}
+	}
+	return false
+}
