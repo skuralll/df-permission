@@ -75,3 +75,36 @@ func (pm *PermissionMatcher) getMatchType(pattern, target string) MatchType {
 	}
 	return UnknownMatch
 }
+
+// 権限文字列をバリデーション
+// - 英数字、ドット、アンダースコア、ハイフンのみを含むことができる
+// - ドットで始まったり終わったりしてはいけない。
+// - 連続したドットも許可されない。
+func (pm *PermissionMatcher) validatePermissionString(permission string) bool {
+	if permission == "" {
+		return false
+	}
+
+	// Check each character
+	for _, r := range permission {
+		if !((r >= 'a' && r <= 'z') ||
+			(r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') ||
+			r == '.' || r == '_' || r == '-') {
+			return false
+		}
+	}
+
+	// Additional checks
+	// Cannot start or end with dot
+	if strings.HasPrefix(permission, ".") || strings.HasSuffix(permission, ".") {
+		return false
+	}
+
+	// Cannot have consecutive dots
+	if strings.Contains(permission, "..") {
+		return false
+	}
+
+	return true
+}
