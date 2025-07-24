@@ -6,13 +6,13 @@ import "strings"
 type PermissionMatcher struct{}
 
 // パターンマッチのタイプ
-type MatchType int
+type MatchType string
 
 const (
-	GlobalWildcard MatchType = iota
-	ExactMatch
-	PrefixWildcard
-	UnknownMatch
+	GlobalWildcard MatchType = "global_wildcard"
+	ExactMatch     MatchType = "exact_match"
+	PrefixWildcard MatchType = "prefix_wildcard"
+	UnknownMatch   MatchType = "unknown"
 )
 
 // PermissionMatcherの新しいインスタンスを作成
