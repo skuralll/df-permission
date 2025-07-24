@@ -76,6 +76,32 @@ func (pm *PermissionMatcher) getMatchType(pattern, target string) MatchType {
 	return UnknownMatch
 }
 
+// パターンが有効なPermission文字列かどうかを確認
+func (pm *PermissionMatcher) ValidatePattern(pattern string) bool {
+	// パターンが空文字列の場合は無効
+	if pattern == "" {
+		return false
+	}
+
+	// グローバルワイルドカードは常に有効
+	if pattern == "*" {
+		return true
+	}
+
+	// プレフィックスワイルドカード (e.g. "world.*") の場合
+	if strings.HasSuffix(pattern, ".*") {
+		prefix := pattern[:len(pattern)-2]
+		// プレフィックスが空文字列の場合は無効
+		if prefix == "" {
+			return false
+		}
+		return pm.validatePermissionString(prefix)
+	}
+
+	// ワイルドカードなしのパターンの場合、文字列全体が有効なPermission文字列であるかを確認
+	return pm.validatePermissionString(pattern)
+}
+
 // 権限文字列をバリデーション
 // - 英数字、ドット、アンダースコア、ハイフンのみを含むことができる
 // - ドットで始まったり終わったりしてはいけない。
