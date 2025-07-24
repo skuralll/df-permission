@@ -68,3 +68,16 @@ func (pc *PermissionChecker) HasPermissionDetailed(
 
 	return false, "", "permission not found in direct permissions or any group"
 }
+
+// 権限のパターンを検証する
+func (pc *PermissionChecker) ValidatePermission(permission string) bool {
+	pc.mutex.RLock()
+	defer pc.mutex.RUnlock()
+
+	return pc.matcher.ValidatePattern(permission)
+}
+
+// 権限のフォーマットを検証する
+func (pc *PermissionChecker) ValidatePermissionFormat(permission string) bool {
+	return pc.ValidatePermission(permission)
+}
