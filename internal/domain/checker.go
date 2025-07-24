@@ -76,8 +76,3 @@ func (pc *PermissionChecker) ValidatePermission(permission string) bool {
 
 	return pc.matcher.ValidatePattern(permission)
 }
-
-// 権限のフォーマットを検証する
-func (pc *PermissionChecker) ValidatePermissionFormat(permission string) bool {
-	return pc.ValidatePermission(permission)
-}
