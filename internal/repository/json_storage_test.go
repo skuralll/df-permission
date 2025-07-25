@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	permission "github.com/skuralll/df-permission"
 )
 
 func TestJSONStorage_Exists(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(permission.StorageConfig{
+	storage := NewJSONStorage(StorageConfig{
 		Path: filepath.Join(tempDir, "test.json"),
 	})
 
@@ -35,20 +34,20 @@ func TestJSONStorage_Exists(t *testing.T) {
 
 func TestJSONStorage_Save_Load(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(permission.StorageConfig{
+	storage := NewJSONStorage(StorageConfig{
 		Path: filepath.Join(tempDir, "test.json"),
 	})
 
 	// テストデータを作成
 	playerID := uuid.New()
-	testData := &permission.PermissionData{
-		Groups: map[string]*permission.Group{
+	testData := &PermissionData{
+		Groups: map[string]*Group{
 			"admin": {
 				Name:        "admin",
 				Permissions: []string{"*"},
 			},
 		},
-		Players: map[uuid.UUID]*permission.PlayerData{
+		Players: map[uuid.UUID]*PlayerData{
 			playerID: {
 				PlayerID:    playerID,
 				PlayerName:  "TestPlayer",
@@ -57,8 +56,8 @@ func TestJSONStorage_Save_Load(t *testing.T) {
 				UpdatedAt:   time.Now(),
 			},
 		},
-		Meta: &permission.Metadata{
-			Version:   permission.PermissionDataVersion,
+		Meta: &Metadata{
+			Version:   PermissionDataVersion,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
@@ -82,8 +81,8 @@ func TestJSONStorage_Save_Load(t *testing.T) {
 	}
 
 	// データの検証
-	if loadedData.Meta.Version != permission.PermissionDataVersion {
-		t.Errorf("Expected version %s, got %s", permission.PermissionDataVersion, loadedData.Meta.Version)
+	if loadedData.Meta.Version != PermissionDataVersion {
+		t.Errorf("Expected version %s, got %s", PermissionDataVersion, loadedData.Meta.Version)
 	}
 
 	if len(loadedData.Groups) != 1 {
@@ -109,7 +108,7 @@ func TestJSONStorage_Save_Load(t *testing.T) {
 
 func TestJSONStorage_Load_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(permission.StorageConfig{
+	storage := NewJSONStorage(StorageConfig{
 		Path: filepath.Join(tempDir, "nonexistent.json"),
 	})
 
@@ -124,8 +123,8 @@ func TestJSONStorage_Load_NonExistentFile(t *testing.T) {
 		t.Fatal("Expected default data, got nil")
 	}
 
-	if data.Meta.Version != permission.PermissionDataVersion {
-		t.Errorf("Expected version %s, got %s", permission.PermissionDataVersion, data.Meta.Version)
+	if data.Meta.Version != PermissionDataVersion {
+		t.Errorf("Expected version %s, got %s", PermissionDataVersion, data.Meta.Version)
 	}
 
 	if len(data.Groups) != 0 {

@@ -1,4 +1,4 @@
-package dfpermission
+package repository
 
 import (
 	"time"
