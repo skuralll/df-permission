@@ -168,6 +168,7 @@ func (pc *PermissionCache) Close() {
 	}
 
 	pc.Clear()
+	pc.enabled = false
 }
 
 // キャッシングが有効かどうかを取得
