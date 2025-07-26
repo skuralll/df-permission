@@ -213,6 +213,135 @@ func (mgr *Manager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) 
 	return fmt.Errorf("player is not in group '%s'", groupName)
 }
 
+// 指定されたパーミッションを持つ新しいパーミッショングループを作成する
+// グループがすでに存在する場合はエラーを返す
+func (mgr *Manager) CreateGroup(name string, permissions []string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	if _, exists := mgr.groups[name]; exists {
+		return fmt.Errorf("group '%s' already exists", name)
+	}
+
+	mgr.groups[name] = &shared.Group{
+		Name:        name,
+		Permissions: permissions,
+	}
+
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// パーミッショングループを削除する
+func (mgr *Manager) DeleteGroup(name string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	// デフォルトグループは削除できない
+	if name == "default" || name == "admin" {
+		return fmt.Errorf("cannot delete system group '%s'", name)
+	}
+
+	// グループが存在するかチェック
+	if _, exists := mgr.groups[name]; !exists {
+		return fmt.Errorf("group '%s' does not exist", name)
+	}
+
+	// グループを削除
+	delete(mgr.groups, name)
+
+	// このグループに所属していたプレイヤーからグループを削除
+	for _, player := range mgr.players {
+		for i, groupName := range player.Groups {
+			if groupName == name {
+				player.Groups = append(player.Groups[:i], player.Groups[i+1:]...)
+				player.UpdatedAt = time.Now()
+
+				// このプレイヤーのキャッシュを無効化
+				if mgr.cache != nil && mgr.cache.IsEnabled() {
+					mgr.cache.InvalidatePlayer(player.PlayerID)
+				}
+				break
+			}
+		}
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// すべてのパーミッショングループのコピーを返す
+func (mgr *Manager) GetAllGroups() map[string]*shared.Group {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	result := make(map[string]*shared.Group)
+	for name, group := range mgr.groups {
+		result[name] = &shared.Group{
+			Name:        group.Name,
+			Permissions: append([]string{}, group.Permissions...),
+		}
+	}
+	return result
+}
+
+// パーミッショングループの権限を更新する
+func (mgr *Manager) UpdateGroup(name string, permissions []string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	// グループが存在するかチェック
+	group, exists := mgr.groups[name]
+	if !exists {
+		return fmt.Errorf("group '%s' does not exist", name)
+	}
+
+	// 権限を更新
+	group.Permissions = append([]string{}, permissions...)
+
+	// このグループに所属するプレイヤーのキャッシュを無効化
+	for _, player := range mgr.players {
+		for _, groupName := range player.Groups {
+			if groupName == name {
+				if mgr.cache != nil && mgr.cache.IsEnabled() {
+					mgr.cache.InvalidatePlayer(player.PlayerID)
+				}
+				break
+			}
+		}
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// 特定のパーミッショングループを取得する
+func (mgr *Manager) GetGroup(name string) *shared.Group {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	group, exists := mgr.groups[name]
+	if !exists {
+		return nil
+	}
+
+	return &shared.Group{
+		Name:        group.Name,
+		Permissions: append([]string{}, group.Permissions...),
+	}
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
