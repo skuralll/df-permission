@@ -268,6 +268,137 @@ func (svc *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerDa
 	}
 }
 
+// プレイヤーに個別権限を追加する
+func (svc *PermissionService) AddPlayerPermission(playerID uuid.UUID, permission string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// プレイヤーデータを取得または作成
+	player, exists := svc.players[playerID]
+	if !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// 既に権限を持っているかチェック
+	for _, perm := range player.Permissions {
+		if perm == permission {
+			return nil // 既に権限を持っている場合は何もしない
+		}
+	}
+
+	// 権限を追加
+	player.Permissions = append(player.Permissions, permission)
+	player.UpdatedAt = time.Now()
+
+	// キャッシュを無効化
+	if svc.cache != nil && svc.cache.IsEnabled() {
+		svc.cache.InvalidatePlayer(playerID)
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーから個別権限を削除する
+func (svc *PermissionService) RemovePlayerPermission(playerID uuid.UUID, permission string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	player, exists := svc.players[playerID]
+	if !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// 権限を探して削除
+	for i, perm := range player.Permissions {
+		if perm == permission {
+			player.Permissions = append(player.Permissions[:i], player.Permissions[i+1:]...)
+			player.UpdatedAt = time.Now()
+
+			// キャッシュを無効化
+			if svc.cache != nil && svc.cache.IsEnabled() {
+				svc.cache.InvalidatePlayer(playerID)
+			}
+
+			// オートセーブ
+			if svc.autoSave {
+				go svc.Save()
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("player does not have permission '%s'", permission)
+}
+
+// プレイヤーの権限を一括設定する
+func (svc *PermissionService) SetPlayerPermissions(playerID uuid.UUID, permissions []string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	player, exists := svc.players[playerID]
+	if !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// 権限を置き換え
+	player.Permissions = append([]string{}, permissions...)
+	player.UpdatedAt = time.Now()
+
+	// キャッシュを無効化
+	if svc.cache != nil && svc.cache.IsEnabled() {
+		svc.cache.InvalidatePlayer(playerID)
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーの全有効権限を取得する（グループ権限と個別権限を含む）
+func (svc *PermissionService) GetPlayerPermissions(playerID uuid.UUID) []string {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	player, exists := svc.players[playerID]
+	if !exists {
+		return []string{}
+	}
+
+	// 権限の重複を防ぐためのmap
+	permissionSet := make(map[string]bool)
+
+	// 個別権限を追加
+	for _, perm := range player.Permissions {
+		permissionSet[perm] = true
+	}
+
+	// グループ権限を追加
+	for _, groupName := range player.Groups {
+		if group, exists := svc.groups[groupName]; exists {
+			for _, perm := range group.Permissions {
+				permissionSet[perm] = true
+			}
+		}
+	}
+
+	// mapからsliceに変換
+	var result []string
+	for perm := range permissionSet {
+		result = append(result, perm)
+	}
+
+	return result
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
