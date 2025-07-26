@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/skuralll/df-permission/internal/repository"
@@ -75,4 +77,51 @@ func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission strin
 	}
 
 	return result
+}
+
+// プレイヤーをパーミッショングループに追加
+func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, groupName string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// すでにグループが存在するか確認
+	if _, exists := svc.groups[groupName]; !exists {
+		return fmt.Errorf("group '%s' does not exist", groupName)
+	}
+
+	// プレイヤーデータを取得または作成
+	player, exists := svc.players[playerID]
+	if !exists {
+		player = &shared.PlayerData{
+			PlayerID:    playerID,
+			PlayerName:  playerName,
+			Groups:      []string{},
+			Permissions: []string{},
+			UpdatedAt:   time.Now(),
+		}
+		svc.players[playerID] = player
+	}
+
+	// グループにすでに参加しているか確認
+	for _, group := range player.Groups {
+		if group == groupName {
+			return nil
+		}
+	}
+
+	// グループを追加
+	player.Groups = append(player.Groups, groupName)
+	player.UpdatedAt = time.Now()
+
+	// キャッシュを無効化
+	if svc.cache != nil && svc.cache.IsEnabled() {
+		svc.cache.InvalidatePlayer(playerID)
+	}
+
+	// セーブする
+	// if svc.settings.AutoSave {
+	// 	go svc.Save()
+	// }
+
+	return nil
 }
