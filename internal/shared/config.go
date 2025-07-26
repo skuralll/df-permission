@@ -18,7 +18,6 @@ type CacheConfig struct {
 // PermissionServiceの設定
 type ServiceConfig struct {
 	AutoSave bool
-	Caching  bool
 	Storage  StorageConfig
 	Cache    CacheConfig
 }

@@ -13,7 +13,6 @@ import (
 type PermissionService struct {
 	// config
 	autoSave bool
-	caching  bool
 	// internal state
 	groups  map[string]*shared.Group
 	players map[uuid.UUID]*shared.PlayerData
@@ -30,7 +29,6 @@ func NewPermissionService(config shared.ServiceConfig) *PermissionService {
 
 	return &PermissionService{
 		autoSave: config.AutoSave,
-		caching:  config.Caching,
 		groups:   make(map[string]*shared.Group),
 		players:  make(map[uuid.UUID]*shared.PlayerData),
 		storage:  storage,
@@ -74,7 +72,6 @@ func (svc *PermissionService) ClearCache() {
 func (svc *PermissionService) SetCacheEnabled(enabled bool) {
 	if svc.cache != nil {
 		svc.cache.SetEnabled(enabled)
-		svc.caching = enabled
 	}
 }
 
