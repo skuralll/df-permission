@@ -37,3 +37,23 @@ type Metadata struct {
 	CreatedAt time.Time `json:"created_at"` // 権限データが作成された日時
 	UpdatedAt time.Time `json:"updated_at"` // 権限データが最後に更新された日時
 }
+
+// ストレージファイルの設定
+type StorageConfig struct {
+	// 保存するファイルのパス
+	Path string
+}
+
+// キャッシュの設定
+type CacheConfig struct {
+	TTL             time.Duration
+	CleanupInterval time.Duration
+	Enabled         bool
+}
+
+// PermissionServiceの設定
+type ManagerConfig struct {
+	AutoSave bool
+	Storage  StorageConfig
+	Cache    CacheConfig
+}

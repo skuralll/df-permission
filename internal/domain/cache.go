@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	dfpermission "github.com/skuralll/df-permission"
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 // 権限チェック結果をメモリに保存し、パフォーマンス向上を狙うためのキャッシュシステム
@@ -27,7 +27,7 @@ type cacheEntry struct {
 	createdAt time.Time
 }
 
-func NewPermissionCache(config dfpermission.CacheConfig) *PermissionCache {
+func NewPermissionCache(config shared.CacheConfig) *PermissionCache {
 	// デフォルト設定
 	if config.TTL == 0 {
 		config.TTL = 30 * time.Second
