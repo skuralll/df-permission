@@ -17,7 +17,7 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 
 #### 高度な機能
 - ✅ **options.go**: オプションパターン実装
-- ✅ **NewManagerWithOptions()**: 柔軟な設定API
+- ✅ **NewManager()**: 柔軟な設定API
 
 #### 権限管理
 - ✅ **グループ管理**: 作成、削除、更新、権限追加/削除
@@ -53,7 +53,6 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 df-permission/
 ├── permission.go               # ✅ 公開API（PermissionManagerインターフェース）
 ├── errors.go                   # ✅ 公開エラー定義（6つのエラー型）
-├── types.go                    # ✅ 公開データ型（設定構造体の再エクスポート）
 ├── options.go                  # ✅ オプションパターン実装
 ├── docs/
 │   └── SPECIFICATION.md        # ✅ 仕様書
@@ -93,23 +92,15 @@ import (
 )
 
 func main() {
-    // 1. 設定を作成
-    config := dfpermission.ManagerConfig{
-        AutoSave: true,
-        Storage: dfpermission.StorageConfig{
-            Path: "./permissions.json",
-        },
-        Cache: dfpermission.CacheConfig{
-            Enabled:         true,
-            TTL:             30 * time.Second,
-            CleanupInterval: time.Minute,
-        },
-    }
+    // 1. オプションパターンでマネージャーを作成
+    mgr := dfpermission.NewManager(
+        dfpermission.WithStorage("./permissions.json"),
+        dfpermission.WithCache(30*time.Second),
+        dfpermission.WithAutoSave(true),
+        dfpermission.WithCacheCleanup(time.Minute),
+    )
     
-    // 2. 公開APIでマネージャーを作成
-    mgr := dfpermission.NewManager(config)
-    
-    // 3. グループを作成
+    // 2. グループを作成
     err := mgr.CreateGroup("vip", []string{"chat.color", "world.build.fast"})
     if err != nil {
         // エラーハンドリング（公開エラー型）
@@ -118,64 +109,65 @@ func main() {
         }
     }
     
-    // 4. プレイヤーをグループに追加
+    // 3. プレイヤーをグループに追加
     playerID := uuid.New()
     err = mgr.AddPlayerToGroup(playerID, "Steve", "vip")
     if err != nil {
         // エラーハンドリング
     }
     
-    // 5. 権限をチェック
+    // 4. 権限をチェック
     if mgr.HasPermission(playerID, "chat.color") {
         // プレイヤーはカラーチャットを使用可能
     }
     
-    // 6. グループに権限を動的に追加
+    // 5. グループに権限を動的に追加
     err = mgr.AddPermissionToGroup("vip", "world.teleport")
     if err != nil {
         // エラーハンドリング
     }
     
-    // 7. プレイヤーは新しい権限を自動的に取得
+    // 6. プレイヤーは新しい権限を自動的に取得
     if mgr.HasPermission(playerID, "world.teleport") {
         // VIPグループのプレイヤーはテレポート可能
     }
     
-    // 8. 個人権限を追加
+    // 7. 個人権限を追加
     err = mgr.AddPlayerPermission(playerID, "custom.permission")
     if err == dfpermission.ErrPlayerNotFound {
         // プレイヤーが存在しない
     }
     
-    // 9. グループから権限を削除
+    // 8. グループから権限を削除
     err = mgr.RemovePermissionFromGroup("vip", "world.build.fast")
     if err == dfpermission.ErrPermissionNotFound {
         // グループが権限を持っていない
     }
     
-    // 10. データを保存
+    // 9. データを保存
     mgr.Save()
 }
 ```
 
-### 内部API直接使用（開発・テスト用）
+### デフォルト設定での使用
 ```go
 package main
 
 import (
-    "github.com/google/uuid"
-    "github.com/skuralll/df-permission/internal/application"
-    "github.com/skuralll/df-permission/internal/shared"
-    "time"
+    "github.com/skuralll/df-permission"
 )
 
 func main() {
-    // 内部APIを直接使用（非推奨）
-    config := shared.ManagerConfig{
-        // 設定内容は同じ
+    // デフォルト設定で使用（最もシンプル）
+    mgr := dfpermission.NewManager()
+    
+    // 基本的な権限管理操作
+    playerID := uuid.New()
+    mgr.AddPlayerToGroup(playerID, "Player1", "admin")
+    
+    if mgr.HasPermission(playerID, "any.permission") {
+        // adminは全ての権限を持つ
     }
-    mgr := application.NewManager(config)
-    // 全ての内部メソッドにアクセス可能
 }
 ```
 
@@ -190,7 +182,7 @@ import (
 
 func main() {
     // オプションパターンでカスタム設定
-    mgr := dfpermission.NewManagerWithOptions(
+    mgr := dfpermission.NewManager(
         dfpermission.WithStorage("./custom.json"),
         dfpermission.WithCache(45*time.Second),
         dfpermission.WithAutoSave(true),
@@ -198,10 +190,10 @@ func main() {
     )
     
     // デフォルト設定で使用
-    mgr := dfpermission.NewManagerWithOptions()
+    mgr := dfpermission.NewManager()
     
     // 部分的なカスタマイズ
-    mgr := dfpermission.NewManagerWithOptions(
+    mgr := dfpermission.NewManager(
         dfpermission.WithStorage("./my_permissions.json"),
     )
 }
@@ -283,8 +275,9 @@ var (
 - **キャッシュ対応**: 権限チェックの高速化
 
 #### ファクトリー関数
-- `NewManager(config ManagerConfig) PermissionManager`
-  - 設定からPermissionManagerを作成
+- `NewManager(opts ...Option) PermissionManager`
+  - オプションパターンでPermissionManagerを作成
+  - デフォルト設定をベースに指定されたオプションを適用
   - 内部実装をラップして安定したAPIを提供
 
 ### 内部API（internal/application/manager.go）

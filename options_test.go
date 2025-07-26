@@ -13,13 +13,13 @@ func cleanupOptionsTest() {
 	os.Remove("/tmp/custom_path.json")
 }
 
-func TestNewManagerWithOptions_DefaultConfig(t *testing.T) {
+func TestNewManager_DefaultConfig(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	// デフォルト設定でマネージャーを作成
-	mgr := NewManagerWithOptions()
+	mgr := NewManager()
 	if mgr == nil {
-		t.Fatal("NewManagerWithOptions should create a valid manager with default config")
+		t.Fatal("NewManager should create a valid manager with default config")
 	}
 
 	// デフォルト設定の動作確認（基本的な操作ができるかテスト）
@@ -38,7 +38,7 @@ func TestWithStorage(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	customPath := "/tmp/custom_path.json"
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithStorage(customPath),
 	)
 
@@ -64,7 +64,7 @@ func TestWithAutoSave(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	// オートセーブ無効でマネージャーを作成
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithStorage("/tmp/test_options.json"),
 		WithAutoSave(false),
 	)
@@ -86,7 +86,7 @@ func TestWithCacheEnabled(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	// キャッシュ無効でマネージャーを作成
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithStorage("/tmp/test_options.json"),
 		WithCacheEnabled(false),
 	)
@@ -107,7 +107,7 @@ func TestWithCache(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	customTTL := 5 * time.Second
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithStorage("/tmp/test_options.json"),
 		WithCache(customTTL),
 	)
@@ -128,7 +128,7 @@ func TestWithCacheCleanup(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	customInterval := 30 * time.Second
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithStorage("/tmp/test_options.json"),
 		WithCacheCleanup(customInterval),
 	)
@@ -149,7 +149,7 @@ func TestMultipleOptions(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	// 複数のオプションを組み合わせてテスト
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithStorage("/tmp/test_options.json"),
 		WithAutoSave(true),
 		WithCache(45*time.Second),
@@ -177,7 +177,7 @@ func TestOptionOrder(t *testing.T) {
 	defer cleanupOptionsTest()
 
 	// オプションの適用順序をテスト（後から適用されるオプションが優先される）
-	mgr := NewManagerWithOptions(
+	mgr := NewManager(
 		WithAutoSave(false),
 		WithAutoSave(true), // この設定が最終的に適用される
 		WithStorage("/tmp/test_options.json"),
@@ -196,34 +196,3 @@ func TestOptionOrder(t *testing.T) {
 	}
 }
 
-func TestBackwardCompatibility(t *testing.T) {
-	defer cleanupOptionsTest()
-
-	// 従来のNewManager関数も正常に動作することを確認
-	config := ManagerConfig{
-		AutoSave: false,
-		Storage: StorageConfig{
-			Path: "/tmp/test_options.json",
-		},
-		Cache: CacheConfig{
-			Enabled:         true,
-			TTL:             10 * time.Second,
-			CleanupInterval: 30 * time.Second,
-		},
-	}
-
-	mgr := NewManager(config)
-	if mgr == nil {
-		t.Fatal("Original NewManager should still work")
-	}
-
-	playerID := uuid.New()
-	err := mgr.AddPlayerToGroup(playerID, "TestPlayer", "admin")
-	if err != nil {
-		t.Fatalf("Failed to add player with original NewManager: %v", err)
-	}
-
-	if !mgr.HasPermission(playerID, "any.permission") {
-		t.Error("Admin should have all permissions with original NewManager")
-	}
-}

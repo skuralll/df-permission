@@ -9,18 +9,12 @@ import (
 )
 
 func createTestPermissionManager() PermissionManager {
-	config := ManagerConfig{
-		AutoSave: false,
-		Storage: StorageConfig{
-			Path: "/tmp/test_permission_public.json",
-		},
-		Cache: CacheConfig{
-			Enabled:         false,
-			TTL:             5 * time.Second,
-			CleanupInterval: 10 * time.Second,
-		},
-	}
-	return NewManager(config)
+	return NewManager(
+		WithStorage("/tmp/test_permission_public.json"),
+		WithAutoSave(false),
+		WithCacheEnabled(false),
+		WithCacheCleanup(10*time.Second),
+	)
 }
 
 func cleanupPublicTest() {
