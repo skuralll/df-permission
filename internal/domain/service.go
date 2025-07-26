@@ -120,8 +120,26 @@ func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, g
 
 	// セーブする
 	// if svc.settings.AutoSave {
-	// 	go svc.Save()
+	go svc.Save()
 	// }
 
 	return nil
+}
+
+// 現在のパーミッションデータをストレージに保存
+func (svc *PermissionService) Save() error {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	data := &shared.PermissionData{
+		Groups:  svc.groups,
+		Players: svc.players,
+		Meta: &shared.Metadata{
+			Version:   shared.PermissionDataVersion,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+	}
+
+	return svc.storage.Save(data)
 }
