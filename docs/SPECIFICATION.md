@@ -34,7 +34,6 @@ df-permission/
 │
 └── internal/
     ├── domain/       # ドメイン層 (権限システムの核心ロジック)
-    │   ├── service.go     # PermissionService (メイン機能)
     │   ├── checker.go     # 権限チェックロジック
     │   ├── matcher.go     # パターンマッチング
     │   └── cache.go       # 権限チェックキャッシュ
@@ -42,7 +41,7 @@ df-permission/
     │   ├── storage.go     # Storage interface
     │   ├── json_storage.go # JSON実装
     │   └── errors.go      # ストレージエラー
-    ├── application/  # アプリケーション層 (Minecraft統合)
+    ├── application/  # アプリケーション層
     └── shared/       # 共有定義
         ├── types.go       # 共有データ型
         └── config.go      # 設定構造体
