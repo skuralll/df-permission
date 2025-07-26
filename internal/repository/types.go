@@ -23,10 +23,3 @@ type PermissionData struct {
 	Players map[uuid.UUID]*shared.PlayerData `json:"players"` // プレイヤーデータのマップ
 	Meta    *Metadata                        `json:"meta"`    // 権限設定メタデータ
 }
-
-
-// ストレージファイルの設定
-type StorageConfig struct {
-	// 保存するファイルのパス
-	Path string
-}

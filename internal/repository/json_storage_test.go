@@ -12,7 +12,7 @@ import (
 
 func TestJSONStorage_Exists(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(StorageConfig{
+	storage := NewJSONStorage(shared.StorageConfig{
 		Path: filepath.Join(tempDir, "test.json"),
 	})
 
@@ -35,7 +35,7 @@ func TestJSONStorage_Exists(t *testing.T) {
 
 func TestJSONStorage_Save_Load(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(StorageConfig{
+	storage := NewJSONStorage(shared.StorageConfig{
 		Path: filepath.Join(tempDir, "test.json"),
 	})
 
@@ -109,7 +109,7 @@ func TestJSONStorage_Save_Load(t *testing.T) {
 
 func TestJSONStorage_Load_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(StorageConfig{
+	storage := NewJSONStorage(shared.StorageConfig{
 		Path: filepath.Join(tempDir, "nonexistent.json"),
 	})
 

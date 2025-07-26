@@ -6,16 +6,18 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 type JSONStorage struct {
-	config StorageConfig
+	config shared.StorageConfig
 	mutex  sync.RWMutex
 }
 
 var _ Storage = (*JSONStorage)(nil)
 
-func NewJSONStorage(config StorageConfig) *JSONStorage {
+func NewJSONStorage(config shared.StorageConfig) *JSONStorage {
 	return &JSONStorage{
 		config: config,
 		mutex:  sync.RWMutex{},
