@@ -16,3 +16,18 @@ type PermissionService struct {
 	checker *PermissionChecker
 	mutex   sync.RWMutex
 }
+
+func NewPermissionService(config shared.ServiceConfig) *PermissionService {
+	storage := repository.NewJSONStorage(config.Storage)
+	cache := NewPermissionCache(config.Cache)
+	checker := NewPermissionChecker()
+
+	return &PermissionService{
+		groups:  make(map[string]*shared.Group),
+		players: make(map[uuid.UUID]*shared.PlayerData),
+		storage: storage,
+		cache:   cache,
+		checker: checker,
+		mutex:   sync.RWMutex{},
+	}
+}
