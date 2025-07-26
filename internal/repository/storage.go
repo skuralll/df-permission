@@ -5,15 +5,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	permission "github.com/skuralll/df-permission"
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 type Storage interface {
 	// ストレージバックエンドからPermissionDataを取得して返す
-	Load() (*permission.PermissionData, error)
+	Load() (*shared.PermissionData, error)
 
 	// PermissionDataをストレージバックエンドに保存
-	Save(data *permission.PermissionData) error
+	Save(data *shared.PermissionData) error
 
 	// ストレージバックエンドに権限データが存在するか確認
 	Exists() bool
@@ -23,12 +23,12 @@ type Storage interface {
 }
 
 // デフォルトのPermissionDataを返す
-func NewDefaultPermissionData() *permission.PermissionData {
-	return &permission.PermissionData{
-		Groups:  make(map[string]*permission.Group),
-		Players: make(map[uuid.UUID]*permission.PlayerData),
-		Meta: &permission.Metadata{
-			Version:   permission.PermissionDataVersion,
+func NewDefaultPermissionData() *shared.PermissionData {
+	return &shared.PermissionData{
+		Groups:  make(map[string]*shared.Group),
+		Players: make(map[uuid.UUID]*shared.PlayerData),
+		Meta: &shared.Metadata{
+			Version:   shared.PermissionDataVersion,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
@@ -36,7 +36,7 @@ func NewDefaultPermissionData() *permission.PermissionData {
 }
 
 // PermissionDataのバリデーションを行う
-func ValidatePermissionData(data *permission.PermissionData) error {
+func ValidatePermissionData(data *shared.PermissionData) error {
 	if data == nil {
 		return NewStorageError("validation", "permission data is nil")
 	}

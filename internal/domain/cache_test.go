@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	dfpermission "github.com/skuralll/df-permission"
 )
 
 func TestNewPermissionCache(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:             10 * time.Second,
 		CleanupInterval: 5 * time.Second,
 		Enabled:         true,
@@ -30,7 +31,7 @@ func TestNewPermissionCache(t *testing.T) {
 }
 
 func TestPermissionCache_SetAndGet(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:     30 * time.Second,
 		Enabled: true,
 	}
@@ -60,7 +61,7 @@ func TestPermissionCache_SetAndGet(t *testing.T) {
 }
 
 func TestPermissionCache_Disabled(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		Enabled: false,
 	}
 	cache := NewPermissionCache(config)
@@ -78,7 +79,7 @@ func TestPermissionCache_Disabled(t *testing.T) {
 }
 
 func TestPermissionCache_TTL(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:     100 * time.Millisecond,
 		Enabled: true,
 	}
@@ -106,7 +107,7 @@ func TestPermissionCache_TTL(t *testing.T) {
 }
 
 func TestPermissionCache_Clear(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:     30 * time.Second,
 		Enabled: true,
 	}
@@ -136,7 +137,7 @@ func TestPermissionCache_Clear(t *testing.T) {
 }
 
 func TestPermissionCache_InvalidatePlayer(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:     30 * time.Second,
 		Enabled: true,
 	}
@@ -174,7 +175,7 @@ func TestPermissionCache_InvalidatePlayer(t *testing.T) {
 }
 
 func TestPermissionCache_InvalidatePermission(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:     30 * time.Second,
 		Enabled: true,
 	}
@@ -212,7 +213,7 @@ func TestPermissionCache_InvalidatePermission(t *testing.T) {
 }
 
 func TestPermissionCache_EnabledState(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:     30 * time.Second,
 		Enabled: false,
 	}
@@ -236,7 +237,7 @@ func TestPermissionCache_EnabledState(t *testing.T) {
 }
 
 func TestPermissionCache_AutoCleanup(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:             50 * time.Millisecond,
 		CleanupInterval: 30 * time.Millisecond,
 		Enabled:         true,
@@ -274,7 +275,7 @@ func TestPermissionCache_AutoCleanup(t *testing.T) {
 }
 
 func TestPermissionCache_CleanupStops(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:             100 * time.Millisecond,
 		CleanupInterval: 20 * time.Millisecond,
 		Enabled:         true,
@@ -300,7 +301,7 @@ func TestPermissionCache_CleanupStops(t *testing.T) {
 }
 
 func TestPermissionCache_SetEnabledCleanup(t *testing.T) {
-	config := CacheConfig{
+	config := dfpermission.CacheConfig{
 		TTL:             50 * time.Millisecond,
 		CleanupInterval: 25 * time.Millisecond,
 		Enabled:         false,
