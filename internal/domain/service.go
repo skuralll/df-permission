@@ -126,6 +126,38 @@ func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, g
 	return nil
 }
 
+// プレイヤーをパーミッショングループから削除する
+// プレイヤーがそのグループにいない場合はエラーを返す
+func (svc *PermissionService) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	player, exists := svc.players[playerID]
+	if !exists {
+		return fmt.Errorf("player not found")
+	}
+
+	// グループを探して削除
+	for i, group := range player.Groups {
+		if group == groupName {
+			player.Groups = append(player.Groups[:i], player.Groups[i+1:]...)
+			player.UpdatedAt = time.Now()
+
+			// このプレイヤーのキャッシュを無効化（グループ所属が変更されたため）
+			if svc.cache != nil && svc.cache.IsEnabled() {
+				svc.cache.InvalidatePlayer(playerID)
+			}
+
+			// if m.settings.AutoSave {
+			go svc.Save()
+			// }
+			return nil
+		}
+	}
+
+	return fmt.Errorf("player is not in group '%s'", groupName)
+}
+
 // 現在のパーミッションデータをストレージに保存
 func (svc *PermissionService) Save() error {
 	svc.mutex.RLock()
