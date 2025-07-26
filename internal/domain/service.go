@@ -158,6 +158,28 @@ func (svc *PermissionService) RemovePlayerFromGroup(playerID uuid.UUID, groupNam
 	return fmt.Errorf("player is not in group '%s'", groupName)
 }
 
+// 指定されたパーミッションを持つ新しいパーミッショングループを作成する
+// グループがすでに存在する場合はエラーを返す
+func (svc *PermissionService) CreateGroup(name string, permissions []string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	if _, exists := svc.groups[name]; exists {
+		return fmt.Errorf("group '%s' already exists", name)
+	}
+
+	svc.groups[name] = &shared.Group{
+		Name:        name,
+		Permissions: permissions,
+	}
+
+	// if m.settings.AutoSave {
+	go svc.Save()
+	// }
+
+	return nil
+}
+
 // 現在のパーミッションデータをストレージに保存
 func (svc *PermissionService) Save() error {
 	svc.mutex.RLock()
