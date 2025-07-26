@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	dfpermission "github.com/skuralll/df-permission"
 	"github.com/skuralll/df-permission/internal/shared"
 )
 
 func TestJSONStorage_Exists(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(shared.StorageConfig{
+	storage := NewJSONStorage(dfpermission.StorageConfig{
 		Path: filepath.Join(tempDir, "test.json"),
 	})
 
@@ -35,7 +36,7 @@ func TestJSONStorage_Exists(t *testing.T) {
 
 func TestJSONStorage_Save_Load(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(shared.StorageConfig{
+	storage := NewJSONStorage(dfpermission.StorageConfig{
 		Path: filepath.Join(tempDir, "test.json"),
 	})
 
@@ -109,7 +110,7 @@ func TestJSONStorage_Save_Load(t *testing.T) {
 
 func TestJSONStorage_Load_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
-	storage := NewJSONStorage(shared.StorageConfig{
+	storage := NewJSONStorage(dfpermission.StorageConfig{
 		Path: filepath.Join(tempDir, "nonexistent.json"),
 	})
 
