@@ -246,6 +246,105 @@ func TestPermissionManager_GroupPermissionManagement(t *testing.T) {
 	}
 }
 
+func TestPermissionManager_SetGetPlayerPermissions(t *testing.T) {
+	defer cleanupPublicTest()
+	mgr := createTestPermissionManager()
+	playerID := uuid.New()
+
+	// Add player to ensure they exist
+	err := mgr.AddPlayerToGroup(playerID, "TestPlayer", "default")
+	if err != nil {
+		t.Fatalf("Failed to add player to default group: %v", err)
+	}
+
+	// Initially, player should have default group permissions
+	permissions := mgr.GetPlayerPermissions(playerID)
+	if len(permissions) == 0 {
+		t.Error("Player in default group should have some permissions")
+	}
+
+	// Set multiple permissions
+	testPermissions := []string{"custom.permission1", "custom.permission2", "admin.special"}
+	err = mgr.SetPlayerPermissions(playerID, testPermissions)
+	if err != nil {
+		t.Fatalf("Failed to set player permissions: %v", err)
+	}
+
+	// Get permissions and verify (should include both individual and group permissions)
+	permissions = mgr.GetPlayerPermissions(playerID)
+	if len(permissions) < len(testPermissions) {
+		t.Errorf("Should have at least %d permissions, got %d", len(testPermissions), len(permissions))
+	}
+
+	// Check each permission exists
+	permMap := make(map[string]bool)
+	for _, perm := range permissions {
+		permMap[perm] = true
+	}
+	for _, expected := range testPermissions {
+		if !permMap[expected] {
+			t.Errorf("Expected permission %s not found in player permissions", expected)
+		}
+		// Also verify with HasPermission
+		if !mgr.HasPermission(playerID, expected) {
+			t.Errorf("Player should have permission %s", expected)
+		}
+	}
+
+	// Replace permissions with new set
+	newPermissions := []string{"new.permission1", "new.permission2"}
+	err = mgr.SetPlayerPermissions(playerID, newPermissions)
+	if err != nil {
+		t.Fatalf("Failed to replace player permissions: %v", err)
+	}
+
+	// Verify new permissions exist (should include both individual and group permissions)
+	permissions = mgr.GetPlayerPermissions(playerID)
+	if len(permissions) < len(newPermissions) {
+		t.Errorf("Should have at least %d permissions after replacement, got %d", len(newPermissions), len(permissions))
+	}
+
+	// Check old permissions are gone
+	for _, oldPerm := range testPermissions {
+		if mgr.HasPermission(playerID, oldPerm) {
+			t.Errorf("Player should not have old permission %s after replacement", oldPerm)
+		}
+	}
+
+	// Check new permissions exist
+	for _, newPerm := range newPermissions {
+		if !mgr.HasPermission(playerID, newPerm) {
+			t.Errorf("Player should have new permission %s", newPerm)
+		}
+	}
+
+	// Clear all permissions
+	err = mgr.SetPlayerPermissions(playerID, []string{})
+	if err != nil {
+		t.Fatalf("Failed to clear player permissions: %v", err)
+	}
+
+	permissions = mgr.GetPlayerPermissions(playerID)
+	// Should still have group permissions, but no individual permissions
+	groupPermissionsCount := len(permissions)
+	if groupPermissionsCount == 0 {
+		t.Error("Player should still have group permissions after clearing individual permissions")
+	}
+
+	// Try to set permissions for non-existent player
+	nonExistentID := uuid.New()
+	err = mgr.SetPlayerPermissions(nonExistentID, []string{"some.permission"})
+	if err != ErrPlayerNotFound {
+		t.Errorf("Expected ErrPlayerNotFound for non-existent player, got %v", err)
+	}
+
+	// GetPlayerPermissions should return empty slice for non-existent player
+	permissions = mgr.GetPlayerPermissions(nonExistentID)
+	if len(permissions) != 0 {
+		t.Errorf("Non-existent player should have empty permissions, got %v", permissions)
+	}
+}
+
 func TestPermissionManager_Save(t *testing.T) {
 	defer cleanupPublicTest()
 	mgr := createTestPermissionManager()

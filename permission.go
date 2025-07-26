@@ -22,6 +22,8 @@ type PermissionManager interface {
 	// 個別プレイヤー権限
 	AddPlayerPermission(playerID uuid.UUID, permission string) error
 	RemovePlayerPermission(playerID uuid.UUID, permission string) error
+	SetPlayerPermissions(playerID uuid.UUID, permissions []string) error
+	GetPlayerPermissions(playerID uuid.UUID) []string
 
 	// グループ権限管理
 	AddPermissionToGroup(groupName, permission string) error
@@ -105,6 +107,19 @@ func (p *permissionManager) AddPermissionToGroup(groupName, permission string) e
 func (p *permissionManager) RemovePermissionFromGroup(groupName, permission string) error {
 	err := p.internal.RemovePermissionFromGroup(groupName, permission)
 	return convertError(err)
+}
+
+// プレイヤーの全権限を設定（置き換え）
+// プレイヤーが存在しない場合はエラー
+func (p *permissionManager) SetPlayerPermissions(playerID uuid.UUID, permissions []string) error {
+	err := p.internal.SetPlayerPermissions(playerID, permissions)
+	return convertError(err)
+}
+
+// プレイヤーの全権限を取得（個人権限+グループ権限）
+// プレイヤーが存在しない場合は空のスライスを返す
+func (p *permissionManager) GetPlayerPermissions(playerID uuid.UUID) []string {
+	return p.internal.GetPlayerPermissions(playerID)
 }
 
 // 現在の権限データをストレージに保存

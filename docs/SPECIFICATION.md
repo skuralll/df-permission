@@ -227,6 +227,8 @@ type PermissionManager interface {
     // 個人権限管理
     AddPlayerPermission(playerID uuid.UUID, permission string) error
     RemovePlayerPermission(playerID uuid.UUID, permission string) error
+    SetPlayerPermissions(playerID uuid.UUID, permissions []string) error
+    GetPlayerPermissions(playerID uuid.UUID) []string
     
     // グループ権限管理
     AddPermissionToGroup(groupName, permission string) error
@@ -250,7 +252,7 @@ var (
 ```
 
 #### 公開APIの特徴
-- **10個のコアメソッド**: 権限管理に必要な機能を厳選
+- **12個のコアメソッド**: 権限管理に必要な機能を厳選
 - **エラー変換**: 内部エラーを6つの公開エラー型に変換
 - **安定したインターフェース**: 内部実装変更に影響されない
 - **キャッシュ対応**: 権限チェックの高速化
@@ -272,8 +274,6 @@ var (
 - `GetGroup(name string) *shared.Group`
 - `GetAllGroups() map[string]*shared.Group`
 - `GetPlayerGroups(playerID uuid.UUID) []string`
-- `SetPlayerPermissions(playerID uuid.UUID, permissions []string) error`
-- `GetPlayerPermissions(playerID uuid.UUID) []string`
 - `Reload() error`
 - `ClearCache()`
 - `SetCacheEnabled(enabled bool)`
