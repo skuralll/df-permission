@@ -197,3 +197,53 @@ func (svc *PermissionService) Save() error {
 
 	return svc.storage.Save(data)
 }
+
+// =============================================================================
+// 内部実装
+// =============================================================================
+
+// デフォルトのパーミッショングループを作成する
+func (svc *PermissionService) initializeDefaultGroups() {
+	// デフォルトグループが存在しない場合は作成
+	if _, exists := svc.groups["default"]; !exists {
+		svc.groups["default"] = &shared.Group{
+			Name:        "default",
+			Permissions: []string{"chat.send", "world.interact"},
+		}
+	}
+
+	// 管理者グループが存在しない場合は作成
+	if _, exists := svc.groups["admin"]; !exists {
+		svc.groups["admin"] = &shared.Group{
+			Name:        "admin",
+			Permissions: []string{"*"},
+		}
+	}
+}
+
+// ストレージからパーミッションデータを読み込む
+func (svc *PermissionService) loadData() error {
+	data, err := svc.storage.Load()
+	if err != nil {
+		return err
+	}
+
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// グループを読み込む
+	if data.Groups != nil {
+		for name, group := range data.Groups {
+			svc.groups[name] = group
+		}
+	}
+
+	// プレイヤーを読み込む
+	if data.Players != nil {
+		for id, player := range data.Players {
+			svc.players[id] = player
+		}
+	}
+
+	return nil
+}
