@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	dfpermission "github.com/skuralll/df-permission"
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 func createTestManager() *Manager {
-	config := dfpermission.ManagerConfig{
+	config := shared.ManagerConfig{
 		AutoSave: false,
-		Storage: dfpermission.StorageConfig{
+		Storage: shared.StorageConfig{
 			Path: "/tmp/test_permissions.json",
 		},
-		Cache: dfpermission.CacheConfig{
+		Cache: shared.CacheConfig{
 			Enabled:         false,
 			TTL:             5 * time.Second,
 			CleanupInterval: 10 * time.Second,
@@ -270,12 +270,12 @@ func TestSystemGroupProtection(t *testing.T) {
 
 func TestCacheManagement(t *testing.T) {
 	defer cleanup()
-	config := dfpermission.ManagerConfig{
+	config := shared.ManagerConfig{
 		AutoSave: false,
-		Storage: dfpermission.StorageConfig{
+		Storage: shared.StorageConfig{
 			Path: "/tmp/test_permissions.json",
 		},
-		Cache: dfpermission.CacheConfig{
+		Cache: shared.CacheConfig{
 			Enabled:         true,
 			TTL:             5 * time.Second,
 			CleanupInterval: 10 * time.Second,

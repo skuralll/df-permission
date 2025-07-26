@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	dfpermission "github.com/skuralll/df-permission"
 	"github.com/skuralll/df-permission/internal/domain"
 	"github.com/skuralll/df-permission/internal/shared"
 )
@@ -23,7 +22,7 @@ type Manager struct {
 	mutex   sync.RWMutex
 }
 
-func NewManager(config dfpermission.ManagerConfig) *Manager {
+func NewManager(config shared.ManagerConfig) *Manager {
 	storage := *domain.NewPermissionRepository(config.Storage)
 	cache := domain.NewPermissionCache(config.Cache)
 	checker := domain.NewPermissionChecker()

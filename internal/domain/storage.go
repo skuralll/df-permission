@@ -1,7 +1,6 @@
 package domain
 
 import (
-	dfpermission "github.com/skuralll/df-permission"
 	"github.com/skuralll/df-permission/internal/repository"
 	"github.com/skuralll/df-permission/internal/shared"
 )
@@ -10,7 +9,7 @@ type PermissionRepository struct {
 	storage repository.Storage
 }
 
-func NewPermissionRepository(config dfpermission.StorageConfig) *PermissionRepository {
+func NewPermissionRepository(config shared.StorageConfig) *PermissionRepository {
 	return &PermissionRepository{
 		storage: repository.NewJSONStorage(config),
 	}
