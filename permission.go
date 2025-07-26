@@ -39,9 +39,10 @@ type permissionManager struct {
 	internal *application.Manager
 }
 
-// 指定された設定でPermissionManagerを作成
-// 内部マネージャをラップし、安定した公開APIを提供
-func NewManager(config ManagerConfig) PermissionManager {
+// オプションパターンでPermissionManagerを作成
+// デフォルト設定をベースに、指定されたオプションを適用
+func NewManager(opts ...Option) PermissionManager {
+	config := buildConfig(opts...)
 	internalMgr := application.NewManager(config)
 	return &permissionManager{
 		internal: internalMgr,
