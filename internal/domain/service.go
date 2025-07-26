@@ -360,6 +360,99 @@ func (svc *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerDa
 	}
 }
 
+// プレイヤーデータを完全に削除する
+func (svc *PermissionService) RemovePlayer(playerID uuid.UUID) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// プレイヤーが存在するかチェック
+	if _, exists := svc.players[playerID]; !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// プレイヤーデータを削除
+	delete(svc.players, playerID)
+
+	// キャッシュを無効化
+	if svc.cache != nil && svc.cache.IsEnabled() {
+		svc.cache.InvalidatePlayer(playerID)
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーが存在するかチェックする
+func (svc *PermissionService) PlayerExists(playerID uuid.UUID) bool {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	_, exists := svc.players[playerID]
+	return exists
+}
+
+// すべてのプレイヤーのリストを取得する
+func (svc *PermissionService) GetAllPlayers() map[uuid.UUID]*shared.PlayerData {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	result := make(map[uuid.UUID]*shared.PlayerData)
+	for id, player := range svc.players {
+		result[id] = &shared.PlayerData{
+			PlayerID:    player.PlayerID,
+			PlayerName:  player.PlayerName,
+			Groups:      append([]string{}, player.Groups...),
+			Permissions: append([]string{}, player.Permissions...),
+			UpdatedAt:   player.UpdatedAt,
+		}
+	}
+	return result
+}
+
+// プレイヤーが所属するグループのリストを取得する
+func (svc *PermissionService) GetPlayerGroups(playerID uuid.UUID) []string {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	player, exists := svc.players[playerID]
+	if !exists {
+		return []string{}
+	}
+
+	return append([]string{}, player.Groups...)
+}
+
+// プレイヤーを新規作成する
+func (svc *PermissionService) CreatePlayer(playerID uuid.UUID, playerName string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// プレイヤーが既に存在するかチェック
+	if _, exists := svc.players[playerID]; exists {
+		return fmt.Errorf("player with ID %s already exists", playerID.String())
+	}
+
+	// プレイヤーデータを作成
+	svc.players[playerID] = &shared.PlayerData{
+		PlayerID:    playerID,
+		PlayerName:  playerName,
+		Groups:      []string{},
+		Permissions: []string{},
+		UpdatedAt:   time.Now(),
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
 // プレイヤーに個別権限を追加する
 func (svc *PermissionService) AddPlayerPermission(playerID uuid.UUID, permission string) error {
 	svc.mutex.Lock()
