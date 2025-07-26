@@ -48,6 +48,13 @@ func NewManager(config ManagerConfig) PermissionManager {
 	}
 }
 
+// オプションパターンでPermissionManagerを作成
+// デフォルト設定をベースに、指定されたオプションを適用
+func NewManagerWithOptions(opts ...Option) PermissionManager {
+	config := buildConfig(opts...)
+	return NewManager(config)
+}
+
 // プレイヤーが特定の権限を持つか確認
 // 直接またはグループ経由で権限を持つ場合true
 func (p *permissionManager) HasPermission(playerID uuid.UUID, permission string) bool {

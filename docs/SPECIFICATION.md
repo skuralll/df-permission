@@ -15,6 +15,10 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 - ✅ ファイルベースストレージ（JSON）
 - ✅ スレッドセーフな操作
 
+#### 高度な機能
+- ✅ **options.go**: オプションパターン実装
+- ✅ **NewManagerWithOptions()**: 柔軟な設定API
+
 #### 権限管理
 - ✅ **グループ管理**: 作成、削除、更新、権限追加/削除
 - ✅ **プレイヤー管理**: 作成、削除、グループ参加/離脱、個人権限設定
@@ -40,7 +44,6 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 ### 🚧 未実装機能
 
 #### 高度な機能
-- ❌ **options.go**: オプションパターン実装
 - ❌ **QuickStart()**: 簡単セットアップ関数
 
 ## プロジェクト構造
@@ -51,6 +54,7 @@ df-permission/
 ├── permission.go               # ✅ 公開API（PermissionManagerインターフェース）
 ├── errors.go                   # ✅ 公開エラー定義（6つのエラー型）
 ├── types.go                    # ✅ 公開データ型（設定構造体の再エクスポート）
+├── options.go                  # ✅ オプションパターン実装
 ├── docs/
 │   └── SPECIFICATION.md        # ✅ 仕様書
 │
@@ -73,7 +77,6 @@ df-permission/
 ### 未実装の拡張機能
 ```
 df-permission/
-├── options.go         # ❌ オプションパターン（未実装）
 └── quickstart.go      # ❌ 簡単セットアップ（未実装）
 ```
 
@@ -176,6 +179,34 @@ func main() {
 }
 ```
 
+### オプションパターン使用方法（推奨）
+```go
+package main
+
+import (
+    "github.com/skuralll/df-permission"
+    "time"
+)
+
+func main() {
+    // オプションパターンでカスタム設定
+    mgr := dfpermission.NewManagerWithOptions(
+        dfpermission.WithStorage("./custom.json"),
+        dfpermission.WithCache(45*time.Second),
+        dfpermission.WithAutoSave(true),
+        dfpermission.WithCacheCleanup(2*time.Minute),
+    )
+    
+    // デフォルト設定で使用
+    mgr := dfpermission.NewManagerWithOptions()
+    
+    // 部分的なカスタマイズ
+    mgr := dfpermission.NewManagerWithOptions(
+        dfpermission.WithStorage("./my_permissions.json"),
+    )
+}
+```
+
 ### 未実装の拡張予定API
 ```go
 package main
@@ -186,13 +217,6 @@ import (
 
 func main() {
     // 将来の拡張機能（未実装）
-    
-    // オプションパターン
-    mgr := dfpermission.NewManager(
-        dfpermission.WithStorage("./permissions.json"),
-        dfpermission.WithCache(30*time.Second),
-        dfpermission.WithAutoSave(true),
-    )
     
     // クイックスタート
     mgr := dfpermission.QuickStart()
