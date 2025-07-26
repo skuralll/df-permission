@@ -585,6 +585,85 @@ func (mgr *Manager) GetPlayerPermissions(playerID uuid.UUID) []string {
 	return result
 }
 
+// グループに権限を追加する
+func (mgr *Manager) AddPermissionToGroup(groupName, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	group, exists := mgr.groups[groupName]
+	if !exists {
+		return fmt.Errorf("group '%s' does not exist", groupName)
+	}
+
+	// 既に権限を持っているかチェック
+	for _, perm := range group.Permissions {
+		if perm == permission {
+			return nil // 既に権限を持っている場合は何もしない
+		}
+	}
+
+	// 権限を追加
+	group.Permissions = append(group.Permissions, permission)
+
+	// このグループに所属するプレイヤーのキャッシュを無効化
+	for _, player := range mgr.players {
+		for _, gName := range player.Groups {
+			if gName == groupName {
+				if mgr.cache != nil && mgr.cache.IsEnabled() {
+					mgr.cache.InvalidatePlayer(player.PlayerID)
+				}
+				break
+			}
+		}
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// グループから権限を削除する
+func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	group, exists := mgr.groups[groupName]
+	if !exists {
+		return fmt.Errorf("group '%s' does not exist", groupName)
+	}
+
+	// 権限を探して削除
+	for i, perm := range group.Permissions {
+		if perm == permission {
+			group.Permissions = append(group.Permissions[:i], group.Permissions[i+1:]...)
+
+			// このグループに所属するプレイヤーのキャッシュを無効化
+			for _, player := range mgr.players {
+				for _, gName := range player.Groups {
+					if gName == groupName {
+						if mgr.cache != nil && mgr.cache.IsEnabled() {
+							mgr.cache.InvalidatePlayer(player.PlayerID)
+						}
+						break
+					}
+				}
+			}
+
+			// オートセーブ
+			if mgr.autoSave {
+				go mgr.Save()
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("group '%s' does not have permission '%s'", groupName, permission)
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
