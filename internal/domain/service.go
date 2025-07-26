@@ -11,6 +11,10 @@ import (
 )
 
 type PermissionService struct {
+	// config
+	autoSave bool
+	caching  bool
+	// internal state
 	groups  map[string]*shared.Group
 	players map[uuid.UUID]*shared.PlayerData
 	storage repository.Storage
@@ -25,12 +29,14 @@ func NewPermissionService(config shared.ServiceConfig) *PermissionService {
 	checker := NewPermissionChecker()
 
 	return &PermissionService{
-		groups:  make(map[string]*shared.Group),
-		players: make(map[uuid.UUID]*shared.PlayerData),
-		storage: storage,
-		cache:   cache,
-		checker: checker,
-		mutex:   sync.RWMutex{},
+		autoSave: config.AutoSave,
+		caching:  config.Caching,
+		groups:   make(map[string]*shared.Group),
+		players:  make(map[uuid.UUID]*shared.PlayerData),
+		storage:  storage,
+		cache:    cache,
+		checker:  checker,
+		mutex:    sync.RWMutex{},
 	}
 }
 
@@ -68,8 +74,13 @@ func (svc *PermissionService) ClearCache() {
 func (svc *PermissionService) SetCacheEnabled(enabled bool) {
 	if svc.cache != nil {
 		svc.cache.SetEnabled(enabled)
-		// svc.settings.CacheEnabled = enabled
+		svc.caching = enabled
 	}
+}
+
+// オートセーブの有効・無効を切り替える
+func (svc *PermissionService) SetAutoSave(enabled bool) {
+	svc.autoSave = enabled
 }
 
 // プレイヤーが特定のパーミッションを持っているかどうかを確認する
@@ -157,9 +168,9 @@ func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, g
 	}
 
 	// セーブする
-	// if svc.settings.AutoSave {
-	go svc.Save()
-	// }
+	if svc.autoSave {
+		go svc.Save()
+	}
 
 	return nil
 }
@@ -186,9 +197,9 @@ func (svc *PermissionService) RemovePlayerFromGroup(playerID uuid.UUID, groupNam
 				svc.cache.InvalidatePlayer(playerID)
 			}
 
-			// if m.settings.AutoSave {
-			go svc.Save()
-			// }
+			if svc.autoSave {
+				go svc.Save()
+			}
 			return nil
 		}
 	}
@@ -211,9 +222,9 @@ func (svc *PermissionService) CreateGroup(name string, permissions []string) err
 		Permissions: permissions,
 	}
 
-	// if m.settings.AutoSave {
-	go svc.Save()
-	// }
+	if svc.autoSave {
+		go svc.Save()
+	}
 
 	return nil
 }
