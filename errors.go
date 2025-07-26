@@ -5,29 +5,28 @@ import (
 	"strings"
 )
 
-// Public error definitions for the permission management system
+// パーミッション管理システムの公開エラー定義
 var (
-	// ErrPlayerNotFound is returned when a requested player does not exist
+	// 存在しないプレイヤー参照時のエラー
 	ErrPlayerNotFound = errors.New("player not found")
 
-	// ErrGroupNotFound is returned when a requested group does not exist
+	// 存在しないグループ参照時のエラー
 	ErrGroupNotFound = errors.New("group not found")
 
-	// ErrGroupAlreadyExists is returned when trying to create a group that already exists
+	// 既存グループ作成時のエラー
 	ErrGroupAlreadyExists = errors.New("group already exists")
 
-	// ErrSystemGroupProtected is returned when trying to delete a system group
+	// システムグループ削除時のエラー
 	ErrSystemGroupProtected = errors.New("system group cannot be deleted")
 
-	// ErrPlayerAlreadyExists is returned when trying to create a player that already exists
+	// 既存プレイヤー作成時のエラー
 	ErrPlayerAlreadyExists = errors.New("player already exists")
 
-	// ErrPermissionNotFound is returned when trying to remove a permission that doesn't exist
+	// 存在しないパーミッション削除時のエラー
 	ErrPermissionNotFound = errors.New("permission not found")
 )
 
-// convertError converts internal errors to public API errors.
-// This provides a stable error interface and hides internal implementation details.
+// 内部エラーを公開APIエラーへ変換
 func convertError(err error) error {
 	if err == nil {
 		return nil
@@ -35,7 +34,7 @@ func convertError(err error) error {
 
 	errMsg := err.Error()
 
-	// Convert player-related errors
+	// プレイヤー関連エラー変換
 	if strings.Contains(errMsg, "player") {
 		if strings.Contains(errMsg, "not found") {
 			return ErrPlayerNotFound
@@ -45,7 +44,7 @@ func convertError(err error) error {
 		}
 	}
 
-	// Convert group-related errors
+	// グループ関連エラー変換
 	if strings.Contains(errMsg, "group") {
 		if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "does not exist") {
 			return ErrGroupNotFound
@@ -58,11 +57,11 @@ func convertError(err error) error {
 		}
 	}
 
-	// Convert permission-related errors
+	// パーミッション関連エラー変換
 	if strings.Contains(errMsg, "permission") && strings.Contains(errMsg, "not") {
 		return ErrPermissionNotFound
 	}
 
-	// Return original error if no conversion is needed
+	// 変換不要時は元のエラーを返却
 	return err
 }
