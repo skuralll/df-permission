@@ -10,10 +10,10 @@ import (
 
 type Storage interface {
 	// ストレージバックエンドからPermissionDataを取得して返す
-	Load() (*PermissionData, error)
+	Load() (*shared.PermissionData, error)
 
 	// PermissionDataをストレージバックエンドに保存
-	Save(data *PermissionData) error
+	Save(data *shared.PermissionData) error
 
 	// ストレージバックエンドに権限データが存在するか確認
 	Exists() bool
@@ -23,12 +23,12 @@ type Storage interface {
 }
 
 // デフォルトのPermissionDataを返す
-func NewDefaultPermissionData() *PermissionData {
-	return &PermissionData{
+func NewDefaultPermissionData() *shared.PermissionData {
+	return &shared.PermissionData{
 		Groups:  make(map[string]*shared.Group),
 		Players: make(map[uuid.UUID]*shared.PlayerData),
-		Meta: &Metadata{
-			Version:   PermissionDataVersion,
+		Meta: &shared.Metadata{
+			Version:   shared.PermissionDataVersion,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
@@ -36,7 +36,7 @@ func NewDefaultPermissionData() *PermissionData {
 }
 
 // PermissionDataのバリデーションを行う
-func ValidatePermissionData(data *PermissionData) error {
+func ValidatePermissionData(data *shared.PermissionData) error {
 	if data == nil {
 		return NewStorageError("validation", "permission data is nil")
 	}
