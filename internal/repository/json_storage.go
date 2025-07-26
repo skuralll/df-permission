@@ -6,23 +6,25 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 type JSONStorage struct {
-	config StorageConfig
+	config shared.StorageConfig
 	mutex  sync.RWMutex
 }
 
 var _ Storage = (*JSONStorage)(nil)
 
-func NewJSONStorage(config StorageConfig) *JSONStorage {
+func NewJSONStorage(config shared.StorageConfig) *JSONStorage {
 	return &JSONStorage{
 		config: config,
 		mutex:  sync.RWMutex{},
 	}
 }
 
-func (j *JSONStorage) Load() (*PermissionData, error) {
+func (j *JSONStorage) Load() (*shared.PermissionData, error) {
 	j.mutex.RLock()
 	defer j.mutex.RUnlock()
 
@@ -38,7 +40,7 @@ func (j *JSONStorage) Load() (*PermissionData, error) {
 	}
 
 	// データをPermissionDataに変換
-	var permData PermissionData
+	var permData shared.PermissionData
 	if err := json.Unmarshal(data, &permData); err != nil {
 		return nil, NewStorageError("parse", err.Error())
 	}
@@ -59,7 +61,7 @@ func (j *JSONStorage) Exists() bool {
 	return err == nil
 }
 
-func (j *JSONStorage) Save(data *PermissionData) error {
+func (j *JSONStorage) Save(data *shared.PermissionData) error {
 	j.mutex.Lock()
 	defer j.mutex.Unlock()
 
