@@ -16,4 +16,7 @@ type CacheConfig struct {
 }
 
 // PermissionServiceの設定
-type ServiceConfig struct{}
+type ServiceConfig struct {
+	Storage StorageConfig
+	Cache   CacheConfig
+}
