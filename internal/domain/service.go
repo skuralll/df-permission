@@ -27,7 +27,7 @@ func NewPermissionService(config shared.ServiceConfig) *PermissionService {
 	cache := NewPermissionCache(config.Cache)
 	checker := NewPermissionChecker()
 
-	return &PermissionService{
+	svc := &PermissionService{
 		autoSave: config.AutoSave,
 		groups:   make(map[string]*shared.Group),
 		players:  make(map[uuid.UUID]*shared.PlayerData),
@@ -36,6 +36,14 @@ func NewPermissionService(config shared.ServiceConfig) *PermissionService {
 		checker:  checker,
 		mutex:    sync.RWMutex{},
 	}
+
+	// ストレージからデータを読み込む
+	svc.initializeDefaultGroups()
+
+	// 既存データをロード
+	svc.loadData()
+
+	return svc
 }
 
 // 現在のパーミッションデータをストレージに保存
