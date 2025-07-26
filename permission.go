@@ -14,6 +14,7 @@ type PermissionManager interface {
 	// グループ管理
 	CreateGroup(name string, permissions []string) error
 	DeleteGroup(name string) error
+	UpdateGroup(name string, permissions []string) error
 
 	// プレイヤーとグループの関係
 	AddPlayerToGroup(playerID uuid.UUID, playerName, groupName string) error
@@ -64,6 +65,13 @@ func (p *permissionManager) CreateGroup(name string, permissions []string) error
 // 存在しない場合やシステムグループの場合はエラー
 func (p *permissionManager) DeleteGroup(name string) error {
 	err := p.internal.DeleteGroup(name)
+	return convertError(err)
+}
+
+// グループの権限を更新（置き換え）
+// グループが存在しない場合はエラー
+func (p *permissionManager) UpdateGroup(name string, permissions []string) error {
+	err := p.internal.UpdateGroup(name, permissions)
 	return convertError(err)
 }
 

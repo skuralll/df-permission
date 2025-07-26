@@ -246,6 +246,92 @@ func TestPermissionManager_GroupPermissionManagement(t *testing.T) {
 	}
 }
 
+func TestPermissionManager_UpdateGroup(t *testing.T) {
+	defer cleanupPublicTest()
+	mgr := createTestPermissionManager()
+	playerID := uuid.New()
+
+	// Create a test group
+	err := mgr.CreateGroup("testers", []string{"test.basic", "test.intermediate"})
+	if err != nil {
+		t.Fatalf("Failed to create group: %v", err)
+	}
+
+	// Add player to group
+	err = mgr.AddPlayerToGroup(playerID, "TestPlayer", "testers")
+	if err != nil {
+		t.Fatalf("Failed to add player to group: %v", err)
+	}
+
+	// Check initial permissions
+	if !mgr.HasPermission(playerID, "test.basic") {
+		t.Error("Player should have test.basic permission from group")
+	}
+	if !mgr.HasPermission(playerID, "test.intermediate") {
+		t.Error("Player should have test.intermediate permission from group")
+	}
+
+	// Update group with new permissions
+	newPermissions := []string{"test.advanced", "test.expert"}
+	err = mgr.UpdateGroup("testers", newPermissions)
+	if err != nil {
+		t.Fatalf("Failed to update group: %v", err)
+	}
+
+	// Check that old permissions are gone
+	if mgr.HasPermission(playerID, "test.basic") {
+		t.Error("Player should not have old permission test.basic after group update")
+	}
+	if mgr.HasPermission(playerID, "test.intermediate") {
+		t.Error("Player should not have old permission test.intermediate after group update")
+	}
+
+	// Check that new permissions exist
+	if !mgr.HasPermission(playerID, "test.advanced") {
+		t.Error("Player should have new permission test.advanced from updated group")
+	}
+	if !mgr.HasPermission(playerID, "test.expert") {
+		t.Error("Player should have new permission test.expert from updated group")
+	}
+
+	// Update group with empty permissions
+	err = mgr.UpdateGroup("testers", []string{})
+	if err != nil {
+		t.Fatalf("Failed to update group with empty permissions: %v", err)
+	}
+
+	// Check that all permissions are gone
+	if mgr.HasPermission(playerID, "test.advanced") {
+		t.Error("Player should not have test.advanced after group cleared")
+	}
+	if mgr.HasPermission(playerID, "test.expert") {
+		t.Error("Player should not have test.expert after group cleared")
+	}
+
+	// Try to update non-existent group
+	err = mgr.UpdateGroup("non-existent", []string{"some.permission"})
+	if err != ErrGroupNotFound {
+		t.Errorf("Expected ErrGroupNotFound for non-existent group, got %v", err)
+	}
+
+	// Try to update system group (should allow it)
+	err = mgr.UpdateGroup("admin", []string{"custom.admin"})
+	if err != nil {
+		t.Errorf("Should be able to update admin group, got %v", err)
+	}
+
+	// Verify admin group update worked
+	adminPlayerID := uuid.New()
+	err = mgr.AddPlayerToGroup(adminPlayerID, "AdminPlayer", "admin")
+	if err != nil {
+		t.Fatalf("Failed to add player to admin group: %v", err)
+	}
+
+	if !mgr.HasPermission(adminPlayerID, "custom.admin") {
+		t.Error("Admin player should have custom.admin permission")
+	}
+}
+
 func TestPermissionManager_SetGetPlayerPermissions(t *testing.T) {
 	defer cleanupPublicTest()
 	mgr := createTestPermissionManager()

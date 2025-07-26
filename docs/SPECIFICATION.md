@@ -219,6 +219,7 @@ type PermissionManager interface {
     // グループ管理
     CreateGroup(name string, permissions []string) error
     DeleteGroup(name string) error
+    UpdateGroup(name string, permissions []string) error
     
     // プレイヤー-グループ関係
     AddPlayerToGroup(playerID uuid.UUID, playerName, groupName string) error
@@ -252,7 +253,7 @@ var (
 ```
 
 #### 公開APIの特徴
-- **12個のコアメソッド**: 権限管理に必要な機能を厳選
+- **13個のコアメソッド**: 権限管理に必要な機能を厳選
 - **エラー変換**: 内部エラーを6つの公開エラー型に変換
 - **安定したインターフェース**: 内部実装変更に影響されない
 - **キャッシュ対応**: 権限チェックの高速化
@@ -270,7 +271,6 @@ var (
 - `PlayerExists(playerID uuid.UUID) bool`
 - `GetPlayerData(playerID uuid.UUID) *shared.PlayerData`
 - `GetAllPlayers() map[uuid.UUID]*shared.PlayerData`
-- `UpdateGroup(name string, permissions []string) error`
 - `GetGroup(name string) *shared.Group`
 - `GetAllGroups() map[string]*shared.Group`
 - `GetPlayerGroups(playerID uuid.UUID) []string`
