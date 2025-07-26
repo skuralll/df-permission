@@ -234,6 +234,48 @@ func (svc *PermissionService) CreateGroup(name string, permissions []string) err
 	return nil
 }
 
+// パーミッショングループを削除する
+func (svc *PermissionService) DeleteGroup(name string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// デフォルトグループは削除できない
+	if name == "default" || name == "admin" {
+		return fmt.Errorf("cannot delete system group '%s'", name)
+	}
+
+	// グループが存在するかチェック
+	if _, exists := svc.groups[name]; !exists {
+		return fmt.Errorf("group '%s' does not exist", name)
+	}
+
+	// グループを削除
+	delete(svc.groups, name)
+
+	// このグループに所属していたプレイヤーからグループを削除
+	for _, player := range svc.players {
+		for i, groupName := range player.Groups {
+			if groupName == name {
+				player.Groups = append(player.Groups[:i], player.Groups[i+1:]...)
+				player.UpdatedAt = time.Now()
+				
+				// このプレイヤーのキャッシュを無効化
+				if svc.cache != nil && svc.cache.IsEnabled() {
+					svc.cache.InvalidatePlayer(player.PlayerID)
+				}
+				break
+			}
+		}
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
 // すべてのパーミッショングループのコピーを返す
 func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
 	svc.mutex.RLock()
@@ -247,6 +289,56 @@ func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
 		}
 	}
 	return result
+}
+
+// パーミッショングループの権限を更新する
+func (svc *PermissionService) UpdateGroup(name string, permissions []string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// グループが存在するかチェック
+	group, exists := svc.groups[name]
+	if !exists {
+		return fmt.Errorf("group '%s' does not exist", name)
+	}
+
+	// 権限を更新
+	group.Permissions = append([]string{}, permissions...)
+
+	// このグループに所属するプレイヤーのキャッシュを無効化
+	for _, player := range svc.players {
+		for _, groupName := range player.Groups {
+			if groupName == name {
+				if svc.cache != nil && svc.cache.IsEnabled() {
+					svc.cache.InvalidatePlayer(player.PlayerID)
+				}
+				break
+			}
+		}
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
+// 特定のパーミッショングループを取得する
+func (svc *PermissionService) GetGroup(name string) *shared.Group {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	group, exists := svc.groups[name]
+	if !exists {
+		return nil
+	}
+
+	return &shared.Group{
+		Name:        group.Name,
+		Permissions: append([]string{}, group.Permissions...),
+	}
 }
 
 // プレイヤーデータのコピーを返す
@@ -397,6 +489,85 @@ func (svc *PermissionService) GetPlayerPermissions(playerID uuid.UUID) []string 
 	}
 
 	return result
+}
+
+// グループに権限を追加する
+func (svc *PermissionService) AddPermissionToGroup(groupName, permission string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	group, exists := svc.groups[groupName]
+	if !exists {
+		return fmt.Errorf("group '%s' does not exist", groupName)
+	}
+
+	// 既に権限を持っているかチェック
+	for _, perm := range group.Permissions {
+		if perm == permission {
+			return nil // 既に権限を持っている場合は何もしない
+		}
+	}
+
+	// 権限を追加
+	group.Permissions = append(group.Permissions, permission)
+
+	// このグループに所属するプレイヤーのキャッシュを無効化
+	for _, player := range svc.players {
+		for _, gName := range player.Groups {
+			if gName == groupName {
+				if svc.cache != nil && svc.cache.IsEnabled() {
+					svc.cache.InvalidatePlayer(player.PlayerID)
+				}
+				break
+			}
+		}
+	}
+
+	// オートセーブ
+	if svc.autoSave {
+		go svc.Save()
+	}
+
+	return nil
+}
+
+// グループから権限を削除する
+func (svc *PermissionService) RemovePermissionFromGroup(groupName, permission string) error {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	group, exists := svc.groups[groupName]
+	if !exists {
+		return fmt.Errorf("group '%s' does not exist", groupName)
+	}
+
+	// 権限を探して削除
+	for i, perm := range group.Permissions {
+		if perm == permission {
+			group.Permissions = append(group.Permissions[:i], group.Permissions[i+1:]...)
+
+			// このグループに所属するプレイヤーのキャッシュを無効化
+			for _, player := range svc.players {
+				for _, gName := range player.Groups {
+					if gName == groupName {
+						if svc.cache != nil && svc.cache.IsEnabled() {
+							svc.cache.InvalidatePlayer(player.PlayerID)
+						}
+						break
+					}
+				}
+			}
+
+			// オートセーブ
+			if svc.autoSave {
+				go svc.Save()
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("group '%s' does not have permission '%s'", groupName, permission)
 }
 
 // =============================================================================
