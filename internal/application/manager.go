@@ -342,6 +342,249 @@ func (mgr *Manager) GetGroup(name string) *shared.Group {
 	}
 }
 
+// プレイヤーデータのコピーを返す
+func (mgr *Manager) GetPlayerData(playerID uuid.UUID) *shared.PlayerData {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return nil
+	}
+
+	return &shared.PlayerData{
+		PlayerID:    player.PlayerID,
+		PlayerName:  player.PlayerName,
+		Groups:      append([]string{}, player.Groups...),
+		Permissions: append([]string{}, player.Permissions...),
+		UpdatedAt:   player.UpdatedAt,
+	}
+}
+
+// プレイヤーデータを完全に削除する
+func (mgr *Manager) RemovePlayer(playerID uuid.UUID) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	// プレイヤーが存在するかチェック
+	if _, exists := mgr.players[playerID]; !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// プレイヤーデータを削除
+	delete(mgr.players, playerID)
+
+	// キャッシュを無効化
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーが存在するかチェックする
+func (mgr *Manager) PlayerExists(playerID uuid.UUID) bool {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	_, exists := mgr.players[playerID]
+	return exists
+}
+
+// すべてのプレイヤーのリストを取得する
+func (mgr *Manager) GetAllPlayers() map[uuid.UUID]*shared.PlayerData {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	result := make(map[uuid.UUID]*shared.PlayerData)
+	for id, player := range mgr.players {
+		result[id] = &shared.PlayerData{
+			PlayerID:    player.PlayerID,
+			PlayerName:  player.PlayerName,
+			Groups:      append([]string{}, player.Groups...),
+			Permissions: append([]string{}, player.Permissions...),
+			UpdatedAt:   player.UpdatedAt,
+		}
+	}
+	return result
+}
+
+// プレイヤーが所属するグループのリストを取得する
+func (mgr *Manager) GetPlayerGroups(playerID uuid.UUID) []string {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return []string{}
+	}
+
+	return append([]string{}, player.Groups...)
+}
+
+// プレイヤーを新規作成する
+func (mgr *Manager) CreatePlayer(playerID uuid.UUID, playerName string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	// プレイヤーが既に存在するかチェック
+	if _, exists := mgr.players[playerID]; exists {
+		return fmt.Errorf("player with ID %s already exists", playerID.String())
+	}
+
+	// プレイヤーデータを作成
+	mgr.players[playerID] = &shared.PlayerData{
+		PlayerID:    playerID,
+		PlayerName:  playerName,
+		Groups:      []string{},
+		Permissions: []string{},
+		UpdatedAt:   time.Now(),
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーに個別権限を追加する
+func (mgr *Manager) AddPlayerPermission(playerID uuid.UUID, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	// プレイヤーデータを取得または作成
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// 既に権限を持っているかチェック
+	for _, perm := range player.Permissions {
+		if perm == permission {
+			return nil // 既に権限を持っている場合は何もしない
+		}
+	}
+
+	// 権限を追加
+	player.Permissions = append(player.Permissions, permission)
+	player.UpdatedAt = time.Now()
+
+	// キャッシュを無効化
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーから個別権限を削除する
+func (mgr *Manager) RemovePlayerPermission(playerID uuid.UUID, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// 権限を探して削除
+	for i, perm := range player.Permissions {
+		if perm == permission {
+			player.Permissions = append(player.Permissions[:i], player.Permissions[i+1:]...)
+			player.UpdatedAt = time.Now()
+
+			// キャッシュを無効化
+			if mgr.cache != nil && mgr.cache.IsEnabled() {
+				mgr.cache.InvalidatePlayer(playerID)
+			}
+
+			// オートセーブ
+			if mgr.autoSave {
+				go mgr.Save()
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("player does not have permission '%s'", permission)
+}
+
+// プレイヤーの権限を一括設定する
+func (mgr *Manager) SetPlayerPermissions(playerID uuid.UUID, permissions []string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return fmt.Errorf("player with ID %s not found", playerID.String())
+	}
+
+	// 権限を置き換え
+	player.Permissions = append([]string{}, permissions...)
+	player.UpdatedAt = time.Now()
+
+	// キャッシュを無効化
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
+	}
+
+	// オートセーブ
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
+// プレイヤーの全有効権限を取得する（グループ権限と個別権限を含む）
+func (mgr *Manager) GetPlayerPermissions(playerID uuid.UUID) []string {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return []string{}
+	}
+
+	// 権限の重複を防ぐためのmap
+	permissionSet := make(map[string]bool)
+
+	// 個別権限を追加
+	for _, perm := range player.Permissions {
+		permissionSet[perm] = true
+	}
+
+	// グループ権限を追加
+	for _, groupName := range player.Groups {
+		if group, exists := mgr.groups[groupName]; exists {
+			for _, perm := range group.Permissions {
+				permissionSet[perm] = true
+			}
+		}
+	}
+
+	// mapからsliceに変換
+	var result []string
+	for perm := range permissionSet {
+		result = append(result, perm)
+	}
+
+	return result
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
