@@ -57,6 +57,13 @@ func (svc *PermissionService) Reload() error {
 	return svc.loadData()
 }
 
+// すべてのキャッシュされたパーミッション結果をクリアする
+func (svc *PermissionService) ClearCache() {
+	if svc.cache != nil {
+		svc.cache.Clear()
+	}
+}
+
 // プレイヤーが特定のパーミッションを持っているかどうかを確認する
 // 結果はキャッシュされる
 func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission string) bool {
@@ -219,11 +226,11 @@ func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
 }
 
 // プレイヤーデータのコピーを返す
-func (m *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerData {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+func (svc *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerData {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
 
-	player, exists := m.players[playerID]
+	player, exists := svc.players[playerID]
 	if !exists {
 		return nil
 	}
