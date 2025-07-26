@@ -5,7 +5,7 @@ import (
 	"github.com/skuralll/df-permission/internal/application"
 )
 
-// PermissionManagerは、権限管理操作のための公開インターフェース
+// 権限管理操作のための公開インターフェース
 // 内部マネージャのラップ、必要なメソッドのみ公開
 type PermissionManager interface {
 	// 権限チェック
@@ -31,12 +31,12 @@ type PermissionManager interface {
 	Save() error
 }
 
-// permissionManagerは、internal.Managerの具体的実装
+// internal.Managerの具体的実装
 type permissionManager struct {
 	internal *application.Manager
 }
 
-// NewManagerは、指定された設定でPermissionManagerを作成
+// 指定された設定でPermissionManagerを作成
 // 内部マネージャをラップし、安定した公開APIを提供
 func NewManager(config ManagerConfig) PermissionManager {
 	internalMgr := application.NewManager(config)
@@ -45,69 +45,69 @@ func NewManager(config ManagerConfig) PermissionManager {
 	}
 }
 
-// HasPermissionは、プレイヤーが特定の権限を持つか確認
+// プレイヤーが特定の権限を持つか確認
 // 直接またはグループ経由で権限を持つ場合true
 func (p *permissionManager) HasPermission(playerID uuid.UUID, permission string) bool {
 	return p.internal.HasPermission(playerID, permission)
 }
 
-// CreateGroupは、指定した権限で新しいグループを作成
+// 指定した権限で新しいグループを作成
 // 既存の場合はエラー
 func (p *permissionManager) CreateGroup(name string, permissions []string) error {
 	err := p.internal.CreateGroup(name, permissions)
 	return convertError(err)
 }
 
-// DeleteGroupは、権限グループを削除
+// 権限グループを削除
 // 存在しない場合やシステムグループの場合はエラー
 func (p *permissionManager) DeleteGroup(name string) error {
 	err := p.internal.DeleteGroup(name)
 	return convertError(err)
 }
 
-// AddPlayerToGroupは、プレイヤーをグループに追加
+// プレイヤーをグループに追加
 // 存在しない場合はプレイヤーを作成
 func (p *permissionManager) AddPlayerToGroup(playerID uuid.UUID, playerName, groupName string) error {
 	err := p.internal.AddPlayerToGroup(playerID, playerName, groupName)
 	return convertError(err)
 }
 
-// RemovePlayerFromGroupは、プレイヤーをグループから削除
+// プレイヤーをグループから削除
 // グループにいない場合はエラー
 func (p *permissionManager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) error {
 	err := p.internal.RemovePlayerFromGroup(playerID, groupName)
 	return convertError(err)
 }
 
-// AddPlayerPermissionは、プレイヤーに直接権限を付与
+// プレイヤーに直接権限を付与
 // プレイヤーが存在しない場合はエラー
 func (p *permissionManager) AddPlayerPermission(playerID uuid.UUID, permission string) error {
 	err := p.internal.AddPlayerPermission(playerID, permission)
 	return convertError(err)
 }
 
-// RemovePlayerPermissionは、プレイヤーから権限を削除
+// プレイヤーから権限を削除
 // 権限を持っていない場合はエラー
 func (p *permissionManager) RemovePlayerPermission(playerID uuid.UUID, permission string) error {
 	err := p.internal.RemovePlayerPermission(playerID, permission)
 	return convertError(err)
 }
 
-// AddPermissionToGroupは、グループに権限を追加
+// グループに権限を追加
 // グループが存在しない場合はエラー
 func (p *permissionManager) AddPermissionToGroup(groupName, permission string) error {
 	err := p.internal.AddPermissionToGroup(groupName, permission)
 	return convertError(err)
 }
 
-// RemovePermissionFromGroupは、グループから権限を削除
+// グループから権限を削除
 // 権限を持っていない場合はエラー
 func (p *permissionManager) RemovePermissionFromGroup(groupName, permission string) error {
 	err := p.internal.RemovePermissionFromGroup(groupName, permission)
 	return convertError(err)
 }
 
-// Saveは、現在の権限データをストレージに保存
+// 現在の権限データをストレージに保存
 func (p *permissionManager) Save() error {
 	err := p.internal.Save()
 	return convertError(err)
