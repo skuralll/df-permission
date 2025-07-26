@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 type Storage interface {
@@ -24,8 +25,8 @@ type Storage interface {
 // デフォルトのPermissionDataを返す
 func NewDefaultPermissionData() *PermissionData {
 	return &PermissionData{
-		Groups:  make(map[string]*Group),
-		Players: make(map[uuid.UUID]*PlayerData),
+		Groups:  make(map[string]*shared.Group),
+		Players: make(map[uuid.UUID]*shared.PlayerData),
 		Meta: &Metadata{
 			Version:   PermissionDataVersion,
 			CreatedAt: time.Now(),

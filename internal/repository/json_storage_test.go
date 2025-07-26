@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/skuralll/df-permission/internal/shared"
 )
 
 func TestJSONStorage_Exists(t *testing.T) {
@@ -41,13 +42,13 @@ func TestJSONStorage_Save_Load(t *testing.T) {
 	// テストデータを作成
 	playerID := uuid.New()
 	testData := &PermissionData{
-		Groups: map[string]*Group{
+		Groups: map[string]*shared.Group{
 			"admin": {
 				Name:        "admin",
 				Permissions: []string{"*"},
 			},
 		},
-		Players: map[uuid.UUID]*PlayerData{
+		Players: map[uuid.UUID]*shared.PlayerData{
 			playerID: {
 				PlayerID:    playerID,
 				PlayerName:  "TestPlayer",
