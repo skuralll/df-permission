@@ -64,6 +64,14 @@ func (svc *PermissionService) ClearCache() {
 	}
 }
 
+// キャッシュの有効・無効を切り替える
+func (svc *PermissionService) SetCacheEnabled(enabled bool) {
+	if svc.cache != nil {
+		svc.cache.SetEnabled(enabled)
+		// svc.settings.CacheEnabled = enabled
+	}
+}
+
 // プレイヤーが特定のパーミッションを持っているかどうかを確認する
 // 結果はキャッシュされる
 func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission string) bool {
