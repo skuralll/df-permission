@@ -198,6 +198,11 @@ func (svc *PermissionService) Save() error {
 	return svc.storage.Save(data)
 }
 
+// ストレージからパーミッションデータを再読み込みする
+func (svc *PermissionService) Reload() error {
+	return svc.loadData()
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
