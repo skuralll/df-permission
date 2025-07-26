@@ -34,6 +34,29 @@ func NewPermissionService(config shared.ServiceConfig) *PermissionService {
 	}
 }
 
+// 現在のパーミッションデータをストレージに保存
+func (svc *PermissionService) Save() error {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	data := &shared.PermissionData{
+		Groups:  svc.groups,
+		Players: svc.players,
+		Meta: &shared.Metadata{
+			Version:   shared.PermissionDataVersion,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+	}
+
+	return svc.storage.Save(data)
+}
+
+// ストレージからパーミッションデータを再読み込みする
+func (svc *PermissionService) Reload() error {
+	return svc.loadData()
+}
+
 // プレイヤーが特定のパーミッションを持っているかどうかを確認する
 // 結果はキャッシュされる
 func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission string) bool {
@@ -178,29 +201,6 @@ func (svc *PermissionService) CreateGroup(name string, permissions []string) err
 	// }
 
 	return nil
-}
-
-// 現在のパーミッションデータをストレージに保存
-func (svc *PermissionService) Save() error {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
-
-	data := &shared.PermissionData{
-		Groups:  svc.groups,
-		Players: svc.players,
-		Meta: &shared.Metadata{
-			Version:   shared.PermissionDataVersion,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		},
-	}
-
-	return svc.storage.Save(data)
-}
-
-// ストレージからパーミッションデータを再読み込みする
-func (svc *PermissionService) Reload() error {
-	return svc.loadData()
 }
 
 // =============================================================================
