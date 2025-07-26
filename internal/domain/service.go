@@ -31,3 +31,48 @@ func NewPermissionService(config shared.ServiceConfig) *PermissionService {
 		mutex:   sync.RWMutex{},
 	}
 }
+
+// プレイヤーが特定のパーミッションを持っているかどうかを確認する
+// 結果はキャッシュされる
+func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission string) bool {
+	// キャッシュから結果を取得
+	if svc.cache != nil && svc.cache.IsEnabled() {
+		if result, found := svc.cache.Get(playerID, permission); found {
+			return result
+		}
+	}
+
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	// プレイヤーデータ取得
+	player, exists := svc.players[playerID]
+	if !exists {
+		// キャッシュ
+		if svc.cache != nil && svc.cache.IsEnabled() {
+			svc.cache.Set(playerID, permission, false)
+		}
+		return false
+	}
+
+	// チェッカー用のグループマップを構築
+	groupsMap := make(map[string][]string)
+	for name, group := range svc.groups {
+		groupsMap[name] = group.Permissions
+	}
+
+	// チェッカーを使用してパーミッションを確認
+	result := svc.checker.HasPermission(
+		player.Permissions,
+		player.Groups,
+		groupsMap,
+		permission,
+	)
+
+	// 結果をキャッシュ
+	if svc.cache != nil && svc.cache.IsEnabled() {
+		svc.cache.Set(playerID, permission, result)
+	}
+
+	return result
+}
