@@ -9,6 +9,12 @@ type PermissionRepository struct {
 	storage repository.Storage
 }
 
+func NewPermissionRepository(config shared.StorageConfig) *PermissionRepository {
+	return &PermissionRepository{
+		storage: repository.NewJSONStorage(config),
+	}
+}
+
 func (p *PermissionRepository) Save(data *shared.PermissionData) error {
 	return p.storage.Save(data)
 }
