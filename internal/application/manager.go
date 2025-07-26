@@ -1,4 +1,4 @@
-package domain
+package application
 
 import (
 	"fmt"
@@ -6,54 +6,55 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/skuralll/df-permission/internal/repository"
+	dfpermission "github.com/skuralll/df-permission"
+	"github.com/skuralll/df-permission/internal/domain"
 	"github.com/skuralll/df-permission/internal/shared"
 )
 
-type PermissionService struct {
+type Manager struct {
 	// config
 	autoSave bool
 	// internal state
+	storage domain.PermissionRepository
 	groups  map[string]*shared.Group
 	players map[uuid.UUID]*shared.PlayerData
-	storage repository.Storage
-	cache   *PermissionCache
-	checker *PermissionChecker
+	cache   *domain.PermissionCache
+	checker *domain.PermissionChecker
 	mutex   sync.RWMutex
 }
 
-func NewPermissionService(config shared.ServiceConfig) *PermissionService {
-	storage := repository.NewJSONStorage(config.Storage)
-	cache := NewPermissionCache(config.Cache)
-	checker := NewPermissionChecker()
+func NewManager(config dfpermission.ManagerConfig) *Manager {
+	storage := *domain.NewPermissionRepository(config.Storage)
+	cache := domain.NewPermissionCache(config.Cache)
+	checker := domain.NewPermissionChecker()
 
-	svc := &PermissionService{
+	mgr := &Manager{
 		autoSave: config.AutoSave,
+		storage:  storage,
 		groups:   make(map[string]*shared.Group),
 		players:  make(map[uuid.UUID]*shared.PlayerData),
-		storage:  storage,
 		cache:    cache,
 		checker:  checker,
 		mutex:    sync.RWMutex{},
 	}
 
 	// ストレージからデータを読み込む
-	svc.initializeDefaultGroups()
+	mgr.initializeDefaultGroups()
 
 	// 既存データをロード
-	svc.loadData()
+	mgr.loadData()
 
-	return svc
+	return mgr
 }
 
 // 現在のパーミッションデータをストレージに保存
-func (svc *PermissionService) Save() error {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) Save() error {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
 	data := &shared.PermissionData{
-		Groups:  svc.groups,
-		Players: svc.players,
+		Groups:  mgr.groups,
+		Players: mgr.players,
 		Meta: &shared.Metadata{
 			Version:   shared.PermissionDataVersion,
 			CreatedAt: time.Now(),
@@ -61,64 +62,64 @@ func (svc *PermissionService) Save() error {
 		},
 	}
 
-	return svc.storage.Save(data)
+	return mgr.storage.Save(data)
 }
 
 // ストレージからパーミッションデータを再読み込みする
-func (svc *PermissionService) Reload() error {
-	return svc.loadData()
+func (mgr *Manager) Reload() error {
+	return mgr.loadData()
 }
 
 // すべてのキャッシュされたパーミッション結果をクリアする
-func (svc *PermissionService) ClearCache() {
-	if svc.cache != nil {
-		svc.cache.Clear()
+func (mgr *Manager) ClearCache() {
+	if mgr.cache != nil {
+		mgr.cache.Clear()
 	}
 }
 
 // キャッシュの有効・無効を切り替える
-func (svc *PermissionService) SetCacheEnabled(enabled bool) {
-	if svc.cache != nil {
-		svc.cache.SetEnabled(enabled)
+func (mgr *Manager) SetCacheEnabled(enabled bool) {
+	if mgr.cache != nil {
+		mgr.cache.SetEnabled(enabled)
 	}
 }
 
 // オートセーブの有効・無効を切り替える
-func (svc *PermissionService) SetAutoSave(enabled bool) {
-	svc.autoSave = enabled
+func (mgr *Manager) SetAutoSave(enabled bool) {
+	mgr.autoSave = enabled
 }
 
 // プレイヤーが特定のパーミッションを持っているかどうかを確認する
 // 結果はキャッシュされる
-func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission string) bool {
+func (mgr *Manager) HasPermission(playerID uuid.UUID, permission string) bool {
 	// キャッシュから結果を取得
-	if svc.cache != nil && svc.cache.IsEnabled() {
-		if result, found := svc.cache.Get(playerID, permission); found {
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		if result, found := mgr.cache.Get(playerID, permission); found {
 			return result
 		}
 	}
 
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
 	// プレイヤーデータ取得
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		// キャッシュ
-		if svc.cache != nil && svc.cache.IsEnabled() {
-			svc.cache.Set(playerID, permission, false)
+		if mgr.cache != nil && mgr.cache.IsEnabled() {
+			mgr.cache.Set(playerID, permission, false)
 		}
 		return false
 	}
 
 	// チェッカー用のグループマップを構築
 	groupsMap := make(map[string][]string)
-	for name, group := range svc.groups {
+	for name, group := range mgr.groups {
 		groupsMap[name] = group.Permissions
 	}
 
 	// チェッカーを使用してパーミッションを確認
-	result := svc.checker.HasPermission(
+	result := mgr.checker.HasPermission(
 		player.Permissions,
 		player.Groups,
 		groupsMap,
@@ -126,25 +127,25 @@ func (svc *PermissionService) HasPermission(playerID uuid.UUID, permission strin
 	)
 
 	// 結果をキャッシュ
-	if svc.cache != nil && svc.cache.IsEnabled() {
-		svc.cache.Set(playerID, permission, result)
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.Set(playerID, permission, result)
 	}
 
 	return result
 }
 
 // プレイヤーをパーミッショングループに追加
-func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, groupName string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) AddPlayerToGroup(playerID uuid.UUID, playerName, groupName string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// すでにグループが存在するか確認
-	if _, exists := svc.groups[groupName]; !exists {
+	if _, exists := mgr.groups[groupName]; !exists {
 		return fmt.Errorf("group '%s' does not exist", groupName)
 	}
 
 	// プレイヤーデータを取得または作成
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		player = &shared.PlayerData{
 			PlayerID:    playerID,
@@ -153,7 +154,7 @@ func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, g
 			Permissions: []string{},
 			UpdatedAt:   time.Now(),
 		}
-		svc.players[playerID] = player
+		mgr.players[playerID] = player
 	}
 
 	// グループにすでに参加しているか確認
@@ -168,13 +169,13 @@ func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, g
 	player.UpdatedAt = time.Now()
 
 	// キャッシュを無効化
-	if svc.cache != nil && svc.cache.IsEnabled() {
-		svc.cache.InvalidatePlayer(playerID)
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
 	}
 
 	// セーブする
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
@@ -182,11 +183,11 @@ func (svc *PermissionService) AddPlayerToGroup(playerID uuid.UUID, playerName, g
 
 // プレイヤーをパーミッショングループから削除する
 // プレイヤーがそのグループにいない場合はエラーを返す
-func (svc *PermissionService) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return fmt.Errorf("player not found")
 	}
@@ -198,12 +199,12 @@ func (svc *PermissionService) RemovePlayerFromGroup(playerID uuid.UUID, groupNam
 			player.UpdatedAt = time.Now()
 
 			// このプレイヤーのキャッシュを無効化（グループ所属が変更されたため）
-			if svc.cache != nil && svc.cache.IsEnabled() {
-				svc.cache.InvalidatePlayer(playerID)
+			if mgr.cache != nil && mgr.cache.IsEnabled() {
+				mgr.cache.InvalidatePlayer(playerID)
 			}
 
-			if svc.autoSave {
-				go svc.Save()
+			if mgr.autoSave {
+				go mgr.Save()
 			}
 			return nil
 		}
@@ -214,30 +215,30 @@ func (svc *PermissionService) RemovePlayerFromGroup(playerID uuid.UUID, groupNam
 
 // 指定されたパーミッションを持つ新しいパーミッショングループを作成する
 // グループがすでに存在する場合はエラーを返す
-func (svc *PermissionService) CreateGroup(name string, permissions []string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) CreateGroup(name string, permissions []string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
-	if _, exists := svc.groups[name]; exists {
+	if _, exists := mgr.groups[name]; exists {
 		return fmt.Errorf("group '%s' already exists", name)
 	}
 
-	svc.groups[name] = &shared.Group{
+	mgr.groups[name] = &shared.Group{
 		Name:        name,
 		Permissions: permissions,
 	}
 
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // パーミッショングループを削除する
-func (svc *PermissionService) DeleteGroup(name string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) DeleteGroup(name string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// デフォルトグループは削除できない
 	if name == "default" || name == "admin" {
@@ -245,23 +246,23 @@ func (svc *PermissionService) DeleteGroup(name string) error {
 	}
 
 	// グループが存在するかチェック
-	if _, exists := svc.groups[name]; !exists {
+	if _, exists := mgr.groups[name]; !exists {
 		return fmt.Errorf("group '%s' does not exist", name)
 	}
 
 	// グループを削除
-	delete(svc.groups, name)
+	delete(mgr.groups, name)
 
 	// このグループに所属していたプレイヤーからグループを削除
-	for _, player := range svc.players {
+	for _, player := range mgr.players {
 		for i, groupName := range player.Groups {
 			if groupName == name {
 				player.Groups = append(player.Groups[:i], player.Groups[i+1:]...)
 				player.UpdatedAt = time.Now()
-				
+
 				// このプレイヤーのキャッシュを無効化
-				if svc.cache != nil && svc.cache.IsEnabled() {
-					svc.cache.InvalidatePlayer(player.PlayerID)
+				if mgr.cache != nil && mgr.cache.IsEnabled() {
+					mgr.cache.InvalidatePlayer(player.PlayerID)
 				}
 				break
 			}
@@ -269,20 +270,20 @@ func (svc *PermissionService) DeleteGroup(name string) error {
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // すべてのパーミッショングループのコピーを返す
-func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) GetAllGroups() map[string]*shared.Group {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
 	result := make(map[string]*shared.Group)
-	for name, group := range svc.groups {
+	for name, group := range mgr.groups {
 		result[name] = &shared.Group{
 			Name:        group.Name,
 			Permissions: append([]string{}, group.Permissions...),
@@ -292,12 +293,12 @@ func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
 }
 
 // パーミッショングループの権限を更新する
-func (svc *PermissionService) UpdateGroup(name string, permissions []string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) UpdateGroup(name string, permissions []string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// グループが存在するかチェック
-	group, exists := svc.groups[name]
+	group, exists := mgr.groups[name]
 	if !exists {
 		return fmt.Errorf("group '%s' does not exist", name)
 	}
@@ -306,11 +307,11 @@ func (svc *PermissionService) UpdateGroup(name string, permissions []string) err
 	group.Permissions = append([]string{}, permissions...)
 
 	// このグループに所属するプレイヤーのキャッシュを無効化
-	for _, player := range svc.players {
+	for _, player := range mgr.players {
 		for _, groupName := range player.Groups {
 			if groupName == name {
-				if svc.cache != nil && svc.cache.IsEnabled() {
-					svc.cache.InvalidatePlayer(player.PlayerID)
+				if mgr.cache != nil && mgr.cache.IsEnabled() {
+					mgr.cache.InvalidatePlayer(player.PlayerID)
 				}
 				break
 			}
@@ -318,19 +319,19 @@ func (svc *PermissionService) UpdateGroup(name string, permissions []string) err
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // 特定のパーミッショングループを取得する
-func (svc *PermissionService) GetGroup(name string) *shared.Group {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) GetGroup(name string) *shared.Group {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
-	group, exists := svc.groups[name]
+	group, exists := mgr.groups[name]
 	if !exists {
 		return nil
 	}
@@ -342,11 +343,11 @@ func (svc *PermissionService) GetGroup(name string) *shared.Group {
 }
 
 // プレイヤーデータのコピーを返す
-func (svc *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerData {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) GetPlayerData(playerID uuid.UUID) *shared.PlayerData {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return nil
 	}
@@ -361,47 +362,47 @@ func (svc *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerDa
 }
 
 // プレイヤーデータを完全に削除する
-func (svc *PermissionService) RemovePlayer(playerID uuid.UUID) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) RemovePlayer(playerID uuid.UUID) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// プレイヤーが存在するかチェック
-	if _, exists := svc.players[playerID]; !exists {
+	if _, exists := mgr.players[playerID]; !exists {
 		return fmt.Errorf("player with ID %s not found", playerID.String())
 	}
 
 	// プレイヤーデータを削除
-	delete(svc.players, playerID)
+	delete(mgr.players, playerID)
 
 	// キャッシュを無効化
-	if svc.cache != nil && svc.cache.IsEnabled() {
-		svc.cache.InvalidatePlayer(playerID)
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // プレイヤーが存在するかチェックする
-func (svc *PermissionService) PlayerExists(playerID uuid.UUID) bool {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) PlayerExists(playerID uuid.UUID) bool {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
-	_, exists := svc.players[playerID]
+	_, exists := mgr.players[playerID]
 	return exists
 }
 
 // すべてのプレイヤーのリストを取得する
-func (svc *PermissionService) GetAllPlayers() map[uuid.UUID]*shared.PlayerData {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) GetAllPlayers() map[uuid.UUID]*shared.PlayerData {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
 	result := make(map[uuid.UUID]*shared.PlayerData)
-	for id, player := range svc.players {
+	for id, player := range mgr.players {
 		result[id] = &shared.PlayerData{
 			PlayerID:    player.PlayerID,
 			PlayerName:  player.PlayerName,
@@ -414,11 +415,11 @@ func (svc *PermissionService) GetAllPlayers() map[uuid.UUID]*shared.PlayerData {
 }
 
 // プレイヤーが所属するグループのリストを取得する
-func (svc *PermissionService) GetPlayerGroups(playerID uuid.UUID) []string {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) GetPlayerGroups(playerID uuid.UUID) []string {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return []string{}
 	}
@@ -427,17 +428,17 @@ func (svc *PermissionService) GetPlayerGroups(playerID uuid.UUID) []string {
 }
 
 // プレイヤーを新規作成する
-func (svc *PermissionService) CreatePlayer(playerID uuid.UUID, playerName string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) CreatePlayer(playerID uuid.UUID, playerName string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// プレイヤーが既に存在するかチェック
-	if _, exists := svc.players[playerID]; exists {
+	if _, exists := mgr.players[playerID]; exists {
 		return fmt.Errorf("player with ID %s already exists", playerID.String())
 	}
 
 	// プレイヤーデータを作成
-	svc.players[playerID] = &shared.PlayerData{
+	mgr.players[playerID] = &shared.PlayerData{
 		PlayerID:    playerID,
 		PlayerName:  playerName,
 		Groups:      []string{},
@@ -446,20 +447,20 @@ func (svc *PermissionService) CreatePlayer(playerID uuid.UUID, playerName string
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // プレイヤーに個別権限を追加する
-func (svc *PermissionService) AddPlayerPermission(playerID uuid.UUID, permission string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) AddPlayerPermission(playerID uuid.UUID, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// プレイヤーデータを取得または作成
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return fmt.Errorf("player with ID %s not found", playerID.String())
 	}
@@ -476,24 +477,24 @@ func (svc *PermissionService) AddPlayerPermission(playerID uuid.UUID, permission
 	player.UpdatedAt = time.Now()
 
 	// キャッシュを無効化
-	if svc.cache != nil && svc.cache.IsEnabled() {
-		svc.cache.InvalidatePlayer(playerID)
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // プレイヤーから個別権限を削除する
-func (svc *PermissionService) RemovePlayerPermission(playerID uuid.UUID, permission string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) RemovePlayerPermission(playerID uuid.UUID, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return fmt.Errorf("player with ID %s not found", playerID.String())
 	}
@@ -505,13 +506,13 @@ func (svc *PermissionService) RemovePlayerPermission(playerID uuid.UUID, permiss
 			player.UpdatedAt = time.Now()
 
 			// キャッシュを無効化
-			if svc.cache != nil && svc.cache.IsEnabled() {
-				svc.cache.InvalidatePlayer(playerID)
+			if mgr.cache != nil && mgr.cache.IsEnabled() {
+				mgr.cache.InvalidatePlayer(playerID)
 			}
 
 			// オートセーブ
-			if svc.autoSave {
-				go svc.Save()
+			if mgr.autoSave {
+				go mgr.Save()
 			}
 
 			return nil
@@ -522,11 +523,11 @@ func (svc *PermissionService) RemovePlayerPermission(playerID uuid.UUID, permiss
 }
 
 // プレイヤーの権限を一括設定する
-func (svc *PermissionService) SetPlayerPermissions(playerID uuid.UUID, permissions []string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) SetPlayerPermissions(playerID uuid.UUID, permissions []string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return fmt.Errorf("player with ID %s not found", playerID.String())
 	}
@@ -536,24 +537,24 @@ func (svc *PermissionService) SetPlayerPermissions(playerID uuid.UUID, permissio
 	player.UpdatedAt = time.Now()
 
 	// キャッシュを無効化
-	if svc.cache != nil && svc.cache.IsEnabled() {
-		svc.cache.InvalidatePlayer(playerID)
+	if mgr.cache != nil && mgr.cache.IsEnabled() {
+		mgr.cache.InvalidatePlayer(playerID)
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // プレイヤーの全有効権限を取得する（グループ権限と個別権限を含む）
-func (svc *PermissionService) GetPlayerPermissions(playerID uuid.UUID) []string {
-	svc.mutex.RLock()
-	defer svc.mutex.RUnlock()
+func (mgr *Manager) GetPlayerPermissions(playerID uuid.UUID) []string {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
 
-	player, exists := svc.players[playerID]
+	player, exists := mgr.players[playerID]
 	if !exists {
 		return []string{}
 	}
@@ -568,7 +569,7 @@ func (svc *PermissionService) GetPlayerPermissions(playerID uuid.UUID) []string 
 
 	// グループ権限を追加
 	for _, groupName := range player.Groups {
-		if group, exists := svc.groups[groupName]; exists {
+		if group, exists := mgr.groups[groupName]; exists {
 			for _, perm := range group.Permissions {
 				permissionSet[perm] = true
 			}
@@ -585,11 +586,11 @@ func (svc *PermissionService) GetPlayerPermissions(playerID uuid.UUID) []string 
 }
 
 // グループに権限を追加する
-func (svc *PermissionService) AddPermissionToGroup(groupName, permission string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) AddPermissionToGroup(groupName, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
-	group, exists := svc.groups[groupName]
+	group, exists := mgr.groups[groupName]
 	if !exists {
 		return fmt.Errorf("group '%s' does not exist", groupName)
 	}
@@ -605,11 +606,11 @@ func (svc *PermissionService) AddPermissionToGroup(groupName, permission string)
 	group.Permissions = append(group.Permissions, permission)
 
 	// このグループに所属するプレイヤーのキャッシュを無効化
-	for _, player := range svc.players {
+	for _, player := range mgr.players {
 		for _, gName := range player.Groups {
 			if gName == groupName {
-				if svc.cache != nil && svc.cache.IsEnabled() {
-					svc.cache.InvalidatePlayer(player.PlayerID)
+				if mgr.cache != nil && mgr.cache.IsEnabled() {
+					mgr.cache.InvalidatePlayer(player.PlayerID)
 				}
 				break
 			}
@@ -617,19 +618,19 @@ func (svc *PermissionService) AddPermissionToGroup(groupName, permission string)
 	}
 
 	// オートセーブ
-	if svc.autoSave {
-		go svc.Save()
+	if mgr.autoSave {
+		go mgr.Save()
 	}
 
 	return nil
 }
 
 // グループから権限を削除する
-func (svc *PermissionService) RemovePermissionFromGroup(groupName, permission string) error {
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
-	group, exists := svc.groups[groupName]
+	group, exists := mgr.groups[groupName]
 	if !exists {
 		return fmt.Errorf("group '%s' does not exist", groupName)
 	}
@@ -640,11 +641,11 @@ func (svc *PermissionService) RemovePermissionFromGroup(groupName, permission st
 			group.Permissions = append(group.Permissions[:i], group.Permissions[i+1:]...)
 
 			// このグループに所属するプレイヤーのキャッシュを無効化
-			for _, player := range svc.players {
+			for _, player := range mgr.players {
 				for _, gName := range player.Groups {
 					if gName == groupName {
-						if svc.cache != nil && svc.cache.IsEnabled() {
-							svc.cache.InvalidatePlayer(player.PlayerID)
+						if mgr.cache != nil && mgr.cache.IsEnabled() {
+							mgr.cache.InvalidatePlayer(player.PlayerID)
 						}
 						break
 					}
@@ -652,8 +653,8 @@ func (svc *PermissionService) RemovePermissionFromGroup(groupName, permission st
 			}
 
 			// オートセーブ
-			if svc.autoSave {
-				go svc.Save()
+			if mgr.autoSave {
+				go mgr.Save()
 			}
 
 			return nil
@@ -668,18 +669,18 @@ func (svc *PermissionService) RemovePermissionFromGroup(groupName, permission st
 // =============================================================================
 
 // デフォルトのパーミッショングループを作成する
-func (svc *PermissionService) initializeDefaultGroups() {
+func (mgr *Manager) initializeDefaultGroups() {
 	// デフォルトグループが存在しない場合は作成
-	if _, exists := svc.groups["default"]; !exists {
-		svc.groups["default"] = &shared.Group{
+	if _, exists := mgr.groups["default"]; !exists {
+		mgr.groups["default"] = &shared.Group{
 			Name:        "default",
 			Permissions: []string{"chat.send", "world.interact"},
 		}
 	}
 
 	// 管理者グループが存在しない場合は作成
-	if _, exists := svc.groups["admin"]; !exists {
-		svc.groups["admin"] = &shared.Group{
+	if _, exists := mgr.groups["admin"]; !exists {
+		mgr.groups["admin"] = &shared.Group{
 			Name:        "admin",
 			Permissions: []string{"*"},
 		}
@@ -687,26 +688,26 @@ func (svc *PermissionService) initializeDefaultGroups() {
 }
 
 // ストレージからパーミッションデータを読み込む
-func (svc *PermissionService) loadData() error {
-	data, err := svc.storage.Load()
+func (mgr *Manager) loadData() error {
+	data, err := mgr.storage.Load()
 	if err != nil {
 		return err
 	}
 
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
 
 	// グループを読み込む
 	if data.Groups != nil {
 		for name, group := range data.Groups {
-			svc.groups[name] = group
+			mgr.groups[name] = group
 		}
 	}
 
 	// プレイヤーを読み込む
 	if data.Players != nil {
 		for id, player := range data.Players {
-			svc.players[id] = player
+			mgr.players[id] = player
 		}
 	}
 

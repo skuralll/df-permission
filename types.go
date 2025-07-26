@@ -1,6 +1,8 @@
-package shared
+package dfpermission
 
-import "time"
+import (
+	"time"
+)
 
 // ストレージファイルの設定
 type StorageConfig struct {
@@ -16,7 +18,7 @@ type CacheConfig struct {
 }
 
 // PermissionServiceの設定
-type ServiceConfig struct {
+type ManagerConfig struct {
 	AutoSave bool
 	Storage  StorageConfig
 	Cache    CacheConfig
