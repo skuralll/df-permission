@@ -184,6 +184,68 @@ func TestPermissionManager_ErrorConversion(t *testing.T) {
 	}
 }
 
+func TestPermissionManager_GroupPermissionManagement(t *testing.T) {
+	defer cleanupPublicTest()
+	mgr := createTestPermissionManager()
+	playerID := uuid.New()
+
+	// Create a test group
+	err := mgr.CreateGroup("testers", []string{"test.basic"})
+	if err != nil {
+		t.Fatalf("Failed to create group: %v", err)
+	}
+
+	// Add player to group
+	err = mgr.AddPlayerToGroup(playerID, "TestPlayer", "testers")
+	if err != nil {
+		t.Fatalf("Failed to add player to group: %v", err)
+	}
+
+	// Add permission to group
+	err = mgr.AddPermissionToGroup("testers", "test.advanced")
+	if err != nil {
+		t.Fatalf("Failed to add permission to group: %v", err)
+	}
+
+	// Check that player now has the new permission
+	if !mgr.HasPermission(playerID, "test.advanced") {
+		t.Error("Player should have permission added to their group")
+	}
+
+	// Check that player still has original permission
+	if !mgr.HasPermission(playerID, "test.basic") {
+		t.Error("Player should still have original group permission")
+	}
+
+	// Remove permission from group
+	err = mgr.RemovePermissionFromGroup("testers", "test.advanced")
+	if err != nil {
+		t.Fatalf("Failed to remove permission from group: %v", err)
+	}
+
+	// Check that player no longer has the removed permission
+	if mgr.HasPermission(playerID, "test.advanced") {
+		t.Error("Player should not have permission removed from their group")
+	}
+
+	// Check that player still has original permission
+	if !mgr.HasPermission(playerID, "test.basic") {
+		t.Error("Player should still have original group permission")
+	}
+
+	// Try to add permission to non-existent group
+	err = mgr.AddPermissionToGroup("non-existent", "some.permission")
+	if err != ErrGroupNotFound {
+		t.Errorf("Expected ErrGroupNotFound, got %v", err)
+	}
+
+	// Try to remove permission that group doesn't have
+	err = mgr.RemovePermissionFromGroup("testers", "non.existent")
+	if err != ErrPermissionNotFound {
+		t.Errorf("Expected ErrPermissionNotFound, got %v", err)
+	}
+}
+
 func TestPermissionManager_Save(t *testing.T) {
 	defer cleanupPublicTest()
 	mgr := createTestPermissionManager()

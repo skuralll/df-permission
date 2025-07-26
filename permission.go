@@ -23,6 +23,10 @@ type PermissionManager interface {
 	AddPlayerPermission(playerID uuid.UUID, permission string) error
 	RemovePlayerPermission(playerID uuid.UUID, permission string) error
 
+	// グループ権限管理
+	AddPermissionToGroup(groupName, permission string) error
+	RemovePermissionFromGroup(groupName, permission string) error
+
 	// システム操作
 	Save() error
 }
@@ -86,6 +90,20 @@ func (p *permissionManager) AddPlayerPermission(playerID uuid.UUID, permission s
 // 権限を持っていない場合はエラー
 func (p *permissionManager) RemovePlayerPermission(playerID uuid.UUID, permission string) error {
 	err := p.internal.RemovePlayerPermission(playerID, permission)
+	return convertError(err)
+}
+
+// AddPermissionToGroupは、グループに権限を追加
+// グループが存在しない場合はエラー
+func (p *permissionManager) AddPermissionToGroup(groupName, permission string) error {
+	err := p.internal.AddPermissionToGroup(groupName, permission)
+	return convertError(err)
+}
+
+// RemovePermissionFromGroupは、グループから権限を削除
+// 権限を持っていない場合はエラー
+func (p *permissionManager) RemovePermissionFromGroup(groupName, permission string) error {
+	err := p.internal.RemovePermissionFromGroup(groupName, permission)
 	return convertError(err)
 }
 

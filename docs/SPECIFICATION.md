@@ -127,13 +127,30 @@ func main() {
         // プレイヤーはカラーチャットを使用可能
     }
     
-    // 6. 個人権限を追加
+    // 6. グループに権限を動的に追加
+    err = mgr.AddPermissionToGroup("vip", "world.teleport")
+    if err != nil {
+        // エラーハンドリング
+    }
+    
+    // 7. プレイヤーは新しい権限を自動的に取得
+    if mgr.HasPermission(playerID, "world.teleport") {
+        // VIPグループのプレイヤーはテレポート可能
+    }
+    
+    // 8. 個人権限を追加
     err = mgr.AddPlayerPermission(playerID, "custom.permission")
     if err == dfpermission.ErrPlayerNotFound {
         // プレイヤーが存在しない
     }
     
-    // 7. データを保存
+    // 9. グループから権限を削除
+    err = mgr.RemovePermissionFromGroup("vip", "world.build.fast")
+    if err == dfpermission.ErrPermissionNotFound {
+        // グループが権限を持っていない
+    }
+    
+    // 10. データを保存
     mgr.Save()
 }
 ```
@@ -211,6 +228,10 @@ type PermissionManager interface {
     AddPlayerPermission(playerID uuid.UUID, permission string) error
     RemovePlayerPermission(playerID uuid.UUID, permission string) error
     
+    // グループ権限管理
+    AddPermissionToGroup(groupName, permission string) error
+    RemovePermissionFromGroup(groupName, permission string) error
+    
     // システム操作
     Save() error
 }
@@ -227,6 +248,12 @@ var (
     ErrPermissionNotFound   = errors.New("permission not found")
 )
 ```
+
+#### 公開APIの特徴
+- **10個のコアメソッド**: 権限管理に必要な機能を厳選
+- **エラー変換**: 内部エラーを6つの公開エラー型に変換
+- **安定したインターフェース**: 内部実装変更に影響されない
+- **キャッシュ対応**: 権限チェックの高速化
 
 #### ファクトリー関数
 - `NewManager(config ManagerConfig) PermissionManager`
@@ -247,8 +274,6 @@ var (
 - `GetPlayerGroups(playerID uuid.UUID) []string`
 - `SetPlayerPermissions(playerID uuid.UUID, permissions []string) error`
 - `GetPlayerPermissions(playerID uuid.UUID) []string`
-- `AddPermissionToGroup(groupName, permission string) error`
-- `RemovePermissionFromGroup(groupName, permission string) error`
 - `Reload() error`
 - `ClearCache()`
 - `SetCacheEnabled(enabled bool)`
