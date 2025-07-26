@@ -203,6 +203,21 @@ func (svc *PermissionService) CreateGroup(name string, permissions []string) err
 	return nil
 }
 
+// すべてのパーミッショングループのコピーを返す
+func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
+	svc.mutex.RLock()
+	defer svc.mutex.RUnlock()
+
+	result := make(map[string]*shared.Group)
+	for name, group := range svc.groups {
+		result[name] = &shared.Group{
+			Name:        group.Name,
+			Permissions: append([]string{}, group.Permissions...),
+		}
+	}
+	return result
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
