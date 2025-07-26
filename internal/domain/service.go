@@ -218,6 +218,25 @@ func (svc *PermissionService) GetAllGroups() map[string]*shared.Group {
 	return result
 }
 
+// プレイヤーデータのコピーを返す
+func (m *PermissionService) GetPlayerData(playerID uuid.UUID) *shared.PlayerData {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	player, exists := m.players[playerID]
+	if !exists {
+		return nil
+	}
+
+	return &shared.PlayerData{
+		PlayerID:    player.PlayerID,
+		PlayerName:  player.PlayerName,
+		Groups:      append([]string{}, player.Groups...),
+		Permissions: append([]string{}, player.Permissions...),
+		UpdatedAt:   player.UpdatedAt,
+	}
+}
+
 // =============================================================================
 // 内部実装
 // =============================================================================
