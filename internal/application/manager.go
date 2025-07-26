@@ -2,6 +2,7 @@ package application
 
 import (
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	dfpermission "github.com/skuralll/df-permission"
@@ -43,6 +44,48 @@ func NewManager(config dfpermission.ManagerConfig) *Manager {
 	mgr.loadData()
 
 	return mgr
+}
+
+// 現在のパーミッションデータをストレージに保存
+func (mgr *Manager) Save() error {
+	mgr.mutex.RLock()
+	defer mgr.mutex.RUnlock()
+
+	data := &shared.PermissionData{
+		Groups:  mgr.groups,
+		Players: mgr.players,
+		Meta: &shared.Metadata{
+			Version:   shared.PermissionDataVersion,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+	}
+
+	return mgr.storage.Save(data)
+}
+
+// ストレージからパーミッションデータを再読み込みする
+func (mgr *Manager) Reload() error {
+	return mgr.loadData()
+}
+
+// すべてのキャッシュされたパーミッション結果をクリアする
+func (mgr *Manager) ClearCache() {
+	if mgr.cache != nil {
+		mgr.cache.Clear()
+	}
+}
+
+// キャッシュの有効・無効を切り替える
+func (mgr *Manager) SetCacheEnabled(enabled bool) {
+	if mgr.cache != nil {
+		mgr.cache.SetEnabled(enabled)
+	}
+}
+
+// オートセーブの有効・無効を切り替える
+func (mgr *Manager) SetAutoSave(enabled bool) {
+	mgr.autoSave = enabled
 }
 
 // =============================================================================
