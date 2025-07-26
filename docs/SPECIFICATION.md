@@ -51,9 +51,11 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 ### 実装済み構造
 ```
 df-permission/
-├── permission.go               # ✅ 公開API（PermissionManagerインターフェース）
-├── errors.go                   # ✅ 公開エラー定義（6つのエラー型）
-├── options.go                  # ✅ オプションパターン実装
+├── permission/                 # ✅ 公開API用ディレクトリ
+│   ├── permission.go           # ✅ 公開API（PermissionManagerインターフェース）
+│   ├── errors.go               # ✅ 公開エラー定義（6つのエラー型）
+│   └── options.go              # ✅ オプションパターン実装
+│            
 ├── docs/
 │   └── SPECIFICATION.md        # ✅ 仕様書
 │
@@ -70,7 +72,7 @@ df-permission/
     ├── application/            # ✅ アプリケーション層
     │   └── manager.go          # ✅ 統合管理機能
     └── shared/                 # ✅ 共有定義
-        ├── types.go            # ✅ 共有データ型（設定構造体含む）
+        └── types.go            # ✅ 共有データ型（設定構造体含む）
 ```
 
 ### 未実装の拡張機能
@@ -87,24 +89,24 @@ package main
 
 import (
     "github.com/google/uuid"
-    "github.com/skuralll/df-permission"
+    "github.com/skuralll/df-permission/permission"
     "time"
 )
 
 func main() {
     // 1. オプションパターンでマネージャーを作成
-    mgr := dfpermission.NewManager(
-        dfpermission.WithStorage("./permissions.json"),
-        dfpermission.WithCache(30*time.Second),
-        dfpermission.WithAutoSave(true),
-        dfpermission.WithCacheCleanup(time.Minute),
+    mgr := permission.NewManager(
+        permission.WithStorage("./permissions.json"),
+        permission.WithCache(30*time.Second),
+        permission.WithAutoSave(true),
+        permission.WithCacheCleanup(time.Minute),
     )
     
     // 2. グループを作成
     err := mgr.CreateGroup("vip", []string{"chat.color", "world.build.fast"})
     if err != nil {
         // エラーハンドリング（公開エラー型）
-        if err == dfpermission.ErrGroupAlreadyExists {
+        if err == permission.ErrGroupAlreadyExists {
             // グループが既に存在
         }
     }
@@ -134,13 +136,13 @@ func main() {
     
     // 7. 個人権限を追加
     err = mgr.AddPlayerPermission(playerID, "custom.permission")
-    if err == dfpermission.ErrPlayerNotFound {
+    if err == permission.ErrPlayerNotFound {
         // プレイヤーが存在しない
     }
     
     // 8. グループから権限を削除
     err = mgr.RemovePermissionFromGroup("vip", "world.build.fast")
-    if err == dfpermission.ErrPermissionNotFound {
+    if err == permission.ErrPermissionNotFound {
         // グループが権限を持っていない
     }
     
@@ -159,7 +161,7 @@ import (
 
 func main() {
     // デフォルト設定で使用（最もシンプル）
-    mgr := dfpermission.NewManager()
+    mgr := permission.NewManager()
     
     // 基本的な権限管理操作
     playerID := uuid.New()
@@ -182,19 +184,19 @@ import (
 
 func main() {
     // オプションパターンでカスタム設定
-    mgr := dfpermission.NewManager(
-        dfpermission.WithStorage("./custom.json"),
-        dfpermission.WithCache(45*time.Second),
-        dfpermission.WithAutoSave(true),
-        dfpermission.WithCacheCleanup(2*time.Minute),
+    mgr := permission.NewManager(
+        permission.WithStorage("./custom.json"),
+        permission.WithCache(45*time.Second),
+        permission.WithAutoSave(true),
+        permission.WithCacheCleanup(2*time.Minute),
     )
     
     // デフォルト設定で使用
-    mgr := dfpermission.NewManager()
+    mgr := permission.NewManager()
     
     // 部分的なカスタマイズ
-    mgr := dfpermission.NewManager(
-        dfpermission.WithStorage("./my_permissions.json"),
+    mgr := permission.NewManager(
+        permission.WithStorage("./my_permissions.json"),
     )
 }
 ```
@@ -211,7 +213,7 @@ func main() {
     // 将来の拡張機能（未実装）
     
     // クイックスタート
-    mgr := dfpermission.QuickStart()
+    mgr := permission.QuickStart()
 }
 ```
 
