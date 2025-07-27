@@ -1,4 +1,4 @@
-package dfpermission
+package permission
 
 import (
 	"os"
@@ -195,4 +195,3 @@ func TestOptionOrder(t *testing.T) {
 		t.Error("File should be auto-saved as the last WithAutoSave(true) should take effect")
 	}
 }
-

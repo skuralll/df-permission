@@ -1,7 +1,6 @@
 package application
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -140,7 +139,7 @@ func (mgr *Manager) AddPlayerToGroup(playerID uuid.UUID, playerName, groupName s
 
 	// すでにグループが存在するか確認
 	if _, exists := mgr.groups[groupName]; !exists {
-		return fmt.Errorf("group '%s' does not exist", groupName)
+		return shared.NewGroupNotFoundError(groupName)
 	}
 
 	// プレイヤーデータを取得または作成
@@ -188,7 +187,7 @@ func (mgr *Manager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) 
 
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player not found")
+		return shared.ErrPlayerNotFound
 	}
 
 	// グループを探して削除
@@ -209,7 +208,7 @@ func (mgr *Manager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) 
 		}
 	}
 
-	return fmt.Errorf("player is not in group '%s'", groupName)
+	return shared.NewPlayerNotInGroupError(groupName)
 }
 
 // 指定されたパーミッションを持つ新しいパーミッショングループを作成する
@@ -218,8 +217,13 @@ func (mgr *Manager) CreateGroup(name string, permissions []string) error {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限リストの検証
+	if invalidPerm, valid := mgr.checker.ValidatePermissions(permissions); !valid {
+		return shared.NewInvalidPermissionError(invalidPerm)
+	}
+
 	if _, exists := mgr.groups[name]; exists {
-		return fmt.Errorf("group '%s' already exists", name)
+		return shared.NewGroupAlreadyExistsError(name)
 	}
 
 	mgr.groups[name] = &shared.Group{
@@ -241,12 +245,12 @@ func (mgr *Manager) DeleteGroup(name string) error {
 
 	// デフォルトグループは削除できない
 	if name == "default" || name == "admin" {
-		return fmt.Errorf("cannot delete system group '%s'", name)
+		return shared.NewSystemGroupProtectedError(name)
 	}
 
 	// グループが存在するかチェック
 	if _, exists := mgr.groups[name]; !exists {
-		return fmt.Errorf("group '%s' does not exist", name)
+		return shared.NewGroupNotFoundError(name)
 	}
 
 	// グループを削除
@@ -296,10 +300,15 @@ func (mgr *Manager) UpdateGroup(name string, permissions []string) error {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限リストの検証
+	if invalidPerm, valid := mgr.checker.ValidatePermissions(permissions); !valid {
+		return shared.NewInvalidPermissionError(invalidPerm)
+	}
+
 	// グループが存在するかチェック
 	group, exists := mgr.groups[name]
 	if !exists {
-		return fmt.Errorf("group '%s' does not exist", name)
+		return shared.NewGroupNotFoundError(name)
 	}
 
 	// 権限を更新
@@ -367,7 +376,7 @@ func (mgr *Manager) RemovePlayer(playerID uuid.UUID) error {
 
 	// プレイヤーが存在するかチェック
 	if _, exists := mgr.players[playerID]; !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// プレイヤーデータを削除
@@ -433,7 +442,7 @@ func (mgr *Manager) CreatePlayer(playerID uuid.UUID, playerName string) error {
 
 	// プレイヤーが既に存在するかチェック
 	if _, exists := mgr.players[playerID]; exists {
-		return fmt.Errorf("player with ID %s already exists", playerID.String())
+		return shared.NewPlayerAlreadyExistsError(playerID)
 	}
 
 	// プレイヤーデータを作成
@@ -458,10 +467,15 @@ func (mgr *Manager) AddPlayerPermission(playerID uuid.UUID, permission string) e
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限フォーマットのバリデーション
+	if !mgr.checker.ValidatePermission(permission) {
+		return shared.NewInvalidPermissionError(permission)
+	}
+
 	// プレイヤーデータを取得または作成
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// 既に権限を持っているかチェック
@@ -495,7 +509,7 @@ func (mgr *Manager) RemovePlayerPermission(playerID uuid.UUID, permission string
 
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// 権限を探して削除
@@ -518,7 +532,7 @@ func (mgr *Manager) RemovePlayerPermission(playerID uuid.UUID, permission string
 		}
 	}
 
-	return fmt.Errorf("player does not have permission '%s'", permission)
+	return shared.NewPlayerPermissionNotFoundError(permission)
 }
 
 // プレイヤーの権限を一括設定する
@@ -526,9 +540,14 @@ func (mgr *Manager) SetPlayerPermissions(playerID uuid.UUID, permissions []strin
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限リストの検証
+	if invalidPerm, valid := mgr.checker.ValidatePermissions(permissions); !valid {
+		return shared.NewInvalidPermissionError(invalidPerm)
+	}
+
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// 権限を置き換え
@@ -589,9 +608,14 @@ func (mgr *Manager) AddPermissionToGroup(groupName, permission string) error {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限フォーマットのバリデーション
+	if !mgr.checker.ValidatePermission(permission) {
+		return shared.NewInvalidPermissionError(permission)
+	}
+
 	group, exists := mgr.groups[groupName]
 	if !exists {
-		return fmt.Errorf("group '%s' does not exist", groupName)
+		return shared.NewGroupNotFoundError(groupName)
 	}
 
 	// 既に権限を持っているかチェック
@@ -631,7 +655,7 @@ func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) erro
 
 	group, exists := mgr.groups[groupName]
 	if !exists {
-		return fmt.Errorf("group '%s' does not exist", groupName)
+		return shared.NewGroupNotFoundError(groupName)
 	}
 
 	// 権限を探して削除
@@ -660,12 +684,13 @@ func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) erro
 		}
 	}
 
-	return fmt.Errorf("group '%s' does not have permission '%s'", groupName, permission)
+	return shared.NewGroupPermissionNotFoundError(groupName, permission)
 }
 
 // =============================================================================
 // 内部実装
 // =============================================================================
+
 
 // デフォルトのパーミッショングループを作成する
 func (mgr *Manager) initializeDefaultGroups() {

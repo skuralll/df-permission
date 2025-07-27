@@ -1,4 +1,4 @@
-package dfpermission
+package permission
 
 import (
 	"os"

@@ -82,3 +82,19 @@ func TestPermissionChecker_ValidatePermission(t *testing.T) {
 		}
 	}
 }
+
+func TestPermissionChecker_ValidatePermissions(t *testing.T) {
+	pc := NewPermissionChecker()
+
+	// 全て有効な場合
+	invalidPerm, valid := pc.ValidatePermissions([]string{"world.build", "chat.*", "*"})
+	if !valid || invalidPerm != "" {
+		t.Errorf("ValidatePermissions(valid) = %q, %v, want empty, true", invalidPerm, valid)
+	}
+
+	// 無効な権限がある場合
+	invalidPerm, valid = pc.ValidatePermissions([]string{"world.build", ".invalid", "chat.*"})
+	if valid || invalidPerm != ".invalid" {
+		t.Errorf("ValidatePermissions(invalid) = %q, %v, want .invalid, false", invalidPerm, valid)
+	}
+}
