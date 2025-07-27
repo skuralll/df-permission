@@ -218,8 +218,8 @@ func (mgr *Manager) CreateGroup(name string, permissions []string) error {
 	defer mgr.mutex.Unlock()
 
 	// 権限リストの検証
-	if err := mgr.validatePermissions(permissions); err != nil {
-		return err
+	if invalidPerm, valid := mgr.checker.ValidatePermissions(permissions); !valid {
+		return shared.NewInvalidPermissionError(invalidPerm)
 	}
 
 	if _, exists := mgr.groups[name]; exists {
@@ -301,8 +301,8 @@ func (mgr *Manager) UpdateGroup(name string, permissions []string) error {
 	defer mgr.mutex.Unlock()
 
 	// 権限リストの検証
-	if err := mgr.validatePermissions(permissions); err != nil {
-		return err
+	if invalidPerm, valid := mgr.checker.ValidatePermissions(permissions); !valid {
+		return shared.NewInvalidPermissionError(invalidPerm)
 	}
 
 	// グループが存在するかチェック
@@ -541,8 +541,8 @@ func (mgr *Manager) SetPlayerPermissions(playerID uuid.UUID, permissions []strin
 	defer mgr.mutex.Unlock()
 
 	// 権限リストの検証
-	if err := mgr.validatePermissions(permissions); err != nil {
-		return err
+	if invalidPerm, valid := mgr.checker.ValidatePermissions(permissions); !valid {
+		return shared.NewInvalidPermissionError(invalidPerm)
 	}
 
 	player, exists := mgr.players[playerID]
@@ -691,15 +691,6 @@ func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) erro
 // 内部実装
 // =============================================================================
 
-// 権限リストの検証を行う
-func (mgr *Manager) validatePermissions(permissions []string) error {
-	for _, permission := range permissions {
-		if !mgr.checker.ValidatePermission(permission) {
-			return shared.NewInvalidPermissionError(permission)
-		}
-	}
-	return nil
-}
 
 // デフォルトのパーミッショングループを作成する
 func (mgr *Manager) initializeDefaultGroups() {

@@ -76,3 +76,16 @@ func (pc *PermissionChecker) ValidatePermission(permission string) bool {
 
 	return pc.matcher.ValidatePattern(permission)
 }
+
+// 権限リストを検証する
+func (pc *PermissionChecker) ValidatePermissions(permissions []string) (string, bool) {
+	pc.mutex.RLock()
+	defer pc.mutex.RUnlock()
+
+	for _, permission := range permissions {
+		if !pc.matcher.ValidatePattern(permission) {
+			return permission, false
+		}
+	}
+	return "", true
+}
