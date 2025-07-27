@@ -38,8 +38,15 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 
 #### 公開API
 - ✅ **permission.go**: 公開APIエントリーポイント
-- ✅ **errors.go**: 公開エラー定義
+- ✅ **errors.go**: 公開エラー定義（統一エラー管理）
 - ✅ **PermissionManager**: ラッパー方式インターフェース
+
+#### エラー管理システム
+- ✅ **統一エラー管理**: 全層でのエラー一貫性
+- ✅ **shared/errors.go**: 中央集約エラー定義
+- ✅ **型ベースエラー**: 文字列マッチング不要
+- ✅ **権限バリデーション**: Domain層での権限フォーマット検証
+- ✅ **エラー再エクスポート**: 公開APIでの統一アクセス
 
 ### 🚧 未実装機能
 
@@ -53,7 +60,7 @@ Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理
 df-permission/
 ├── permission/                 # ✅ 公開API用ディレクトリ
 │   ├── permission.go           # ✅ 公開API（PermissionManagerインターフェース）
-│   ├── errors.go               # ✅ 公開エラー定義（6つのエラー型）
+│   ├── errors.go               # ✅ 統一エラー管理（11種類のエラー型）
 │   └── options.go              # ✅ オプションパターン実装
 │            
 ├── docs/
@@ -67,12 +74,12 @@ df-permission/
     │   └── storage.go          # ✅ ドメイン層ストレージ（リポジトリブリッジ）
     ├── repository/             # ✅ データアクセス層
     │   ├── storage.go          # ✅ Storage interface
-    │   ├── json_storage.go     # ✅ JSON実装
-    │   └── errors.go           # ✅ ストレージエラー
+    │   └── json_storage.go     # ✅ JSON実装
     ├── application/            # ✅ アプリケーション層
-    │   └── manager.go          # ✅ 統合管理機能
+    │   └── manager.go          # ✅ 統合管理機能（権限バリデーション対応）
     └── shared/                 # ✅ 共有定義
-        └── types.go            # ✅ 共有データ型（設定構造体含む）
+        ├── types.go            # ✅ 共有データ型（設定構造体含む）
+        └── errors.go           # ✅ 統一エラー定義（11種類+生成関数）
 ```
 
 ### 未実装の拡張機能
@@ -260,19 +267,32 @@ type PermissionManager interface {
 
 #### 公開エラー型（errors.go）
 ```go
+// 統一エラー管理システム - shared パッケージから再エクスポート
 var (
-    ErrPlayerNotFound       = errors.New("player not found")
-    ErrGroupNotFound        = errors.New("group not found")
-    ErrGroupAlreadyExists   = errors.New("group already exists")
-    ErrSystemGroupProtected = errors.New("system group cannot be deleted")
-    ErrPlayerAlreadyExists  = errors.New("player already exists")
-    ErrPermissionNotFound   = errors.New("permission not found")
+    // ストレージ関連エラー
+    ErrStorage = shared.ErrStorage
+
+    // プレイヤー関連エラー
+    ErrPlayerNotFound           = shared.ErrPlayerNotFound
+    ErrPlayerAlreadyExists      = shared.ErrPlayerAlreadyExists
+    ErrPlayerPermissionNotFound = shared.ErrPlayerPermissionNotFound
+    ErrPlayerNotInGroup         = shared.ErrPlayerNotInGroup
+
+    // グループ関連エラー
+    ErrGroupNotFound           = shared.ErrGroupNotFound
+    ErrGroupAlreadyExists      = shared.ErrGroupAlreadyExists
+    ErrSystemGroupProtected    = shared.ErrSystemGroupProtected
+    ErrGroupPermissionNotFound = shared.ErrGroupPermissionNotFound
+
+    // 権限関連エラー
+    ErrInvalidPermission = shared.ErrInvalidPermission
 )
 ```
 
 #### 公開APIの特徴
 - **13個のコアメソッド**: 権限管理に必要な機能を厳選
-- **エラー変換**: 内部エラーを6つの公開エラー型に変換
+- **統一エラー管理**: 11種類の公開エラー型を再エクスポート
+- **権限バリデーション**: 不正な権限フォーマットの自動検出
 - **安定したインターフェース**: 内部実装変更に影響されない
 - **キャッシュ対応**: 権限チェックの高速化
 
@@ -385,6 +405,7 @@ type CacheConfig struct {
 5. **共有層**: `internal/shared/`
    - 共通データ型
    - 設定構造体
+   - 統一エラー定義
 
 ### 設計原則
 - **依存性逆転**: 上位レイヤーが下位レイヤーのインターフェースに依存
