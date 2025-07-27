@@ -1,7 +1,6 @@
 package application
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -140,7 +139,7 @@ func (mgr *Manager) AddPlayerToGroup(playerID uuid.UUID, playerName, groupName s
 
 	// すでにグループが存在するか確認
 	if _, exists := mgr.groups[groupName]; !exists {
-		return fmt.Errorf("group '%s' does not exist", groupName)
+		return shared.NewGroupNotFoundError(groupName)
 	}
 
 	// プレイヤーデータを取得または作成
@@ -219,7 +218,7 @@ func (mgr *Manager) CreateGroup(name string, permissions []string) error {
 	defer mgr.mutex.Unlock()
 
 	if _, exists := mgr.groups[name]; exists {
-		return fmt.Errorf("group '%s' already exists", name)
+		return shared.NewGroupAlreadyExistsError(name)
 	}
 
 	mgr.groups[name] = &shared.Group{
@@ -241,12 +240,12 @@ func (mgr *Manager) DeleteGroup(name string) error {
 
 	// デフォルトグループは削除できない
 	if name == "default" || name == "admin" {
-		return fmt.Errorf("cannot delete system group '%s'", name)
+		return shared.NewSystemGroupProtectedError(name)
 	}
 
 	// グループが存在するかチェック
 	if _, exists := mgr.groups[name]; !exists {
-		return fmt.Errorf("group '%s' does not exist", name)
+		return shared.NewGroupNotFoundError(name)
 	}
 
 	// グループを削除
@@ -299,7 +298,7 @@ func (mgr *Manager) UpdateGroup(name string, permissions []string) error {
 	// グループが存在するかチェック
 	group, exists := mgr.groups[name]
 	if !exists {
-		return fmt.Errorf("group '%s' does not exist", name)
+		return shared.NewGroupNotFoundError(name)
 	}
 
 	// 権限を更新
@@ -591,7 +590,7 @@ func (mgr *Manager) AddPermissionToGroup(groupName, permission string) error {
 
 	group, exists := mgr.groups[groupName]
 	if !exists {
-		return fmt.Errorf("group '%s' does not exist", groupName)
+		return shared.NewGroupNotFoundError(groupName)
 	}
 
 	// 既に権限を持っているかチェック
@@ -631,7 +630,7 @@ func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) erro
 
 	group, exists := mgr.groups[groupName]
 	if !exists {
-		return fmt.Errorf("group '%s' does not exist", groupName)
+		return shared.NewGroupNotFoundError(groupName)
 	}
 
 	// 権限を探して削除
@@ -660,7 +659,7 @@ func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) erro
 		}
 	}
 
-	return fmt.Errorf("group '%s' does not have permission '%s'", groupName, permission)
+	return shared.NewGroupPermissionNotFoundError(groupName, permission)
 }
 
 // =============================================================================
