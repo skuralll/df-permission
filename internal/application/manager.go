@@ -217,6 +217,11 @@ func (mgr *Manager) CreateGroup(name string, permissions []string) error {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限リストの検証
+	if err := mgr.validatePermissions(permissions); err != nil {
+		return err
+	}
+
 	if _, exists := mgr.groups[name]; exists {
 		return shared.NewGroupAlreadyExistsError(name)
 	}
@@ -294,6 +299,11 @@ func (mgr *Manager) GetAllGroups() map[string]*shared.Group {
 func (mgr *Manager) UpdateGroup(name string, permissions []string) error {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
+
+	// 権限リストの検証
+	if err := mgr.validatePermissions(permissions); err != nil {
+		return err
+	}
 
 	// グループが存在するかチェック
 	group, exists := mgr.groups[name]
@@ -457,6 +467,11 @@ func (mgr *Manager) AddPlayerPermission(playerID uuid.UUID, permission string) e
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限フォーマットのバリデーション
+	if !mgr.checker.ValidatePermission(permission) {
+		return shared.NewInvalidPermissionError(permission)
+	}
+
 	// プレイヤーデータを取得または作成
 	player, exists := mgr.players[playerID]
 	if !exists {
@@ -525,6 +540,11 @@ func (mgr *Manager) SetPlayerPermissions(playerID uuid.UUID, permissions []strin
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
 
+	// 権限リストの検証
+	if err := mgr.validatePermissions(permissions); err != nil {
+		return err
+	}
+
 	player, exists := mgr.players[playerID]
 	if !exists {
 		return shared.NewPlayerNotFoundError(playerID)
@@ -587,6 +607,11 @@ func (mgr *Manager) GetPlayerPermissions(playerID uuid.UUID) []string {
 func (mgr *Manager) AddPermissionToGroup(groupName, permission string) error {
 	mgr.mutex.Lock()
 	defer mgr.mutex.Unlock()
+
+	// 権限フォーマットのバリデーション
+	if !mgr.checker.ValidatePermission(permission) {
+		return shared.NewInvalidPermissionError(permission)
+	}
 
 	group, exists := mgr.groups[groupName]
 	if !exists {
@@ -665,6 +690,16 @@ func (mgr *Manager) RemovePermissionFromGroup(groupName, permission string) erro
 // =============================================================================
 // 内部実装
 // =============================================================================
+
+// 権限リストの検証を行う
+func (mgr *Manager) validatePermissions(permissions []string) error {
+	for _, permission := range permissions {
+		if !mgr.checker.ValidatePermission(permission) {
+			return shared.NewInvalidPermissionError(permission)
+		}
+	}
+	return nil
+}
 
 // デフォルトのパーミッショングループを作成する
 func (mgr *Manager) initializeDefaultGroups() {
