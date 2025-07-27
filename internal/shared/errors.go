@@ -14,25 +14,23 @@ var (
 
 // プレイヤー関連エラー
 var (
-	ErrPlayerNotFound      = errors.New("player not found")
-	ErrPlayerAlreadyExists = errors.New("player already exists")
+	ErrPlayerNotFound           = errors.New("player not found")
+	ErrPlayerAlreadyExists      = errors.New("player already exists")
 	ErrPlayerPermissionNotFound = errors.New("player does not have permission")
-	ErrPlayerNotInGroup    = errors.New("player is not in group")
+	ErrPlayerNotInGroup         = errors.New("player is not in group")
 )
 
 // グループ関連エラー
 var (
-	ErrGroupNotFound        = errors.New("group not found")
-	ErrGroupAlreadyExists   = errors.New("group already exists")
-	ErrSystemGroupProtected = errors.New("system group cannot be deleted")
+	ErrGroupNotFound           = errors.New("group not found")
+	ErrGroupAlreadyExists      = errors.New("group already exists")
+	ErrSystemGroupProtected    = errors.New("system group cannot be deleted")
 	ErrGroupPermissionNotFound = errors.New("group does not have permission")
 )
 
 // 権限関連エラー
 var (
-	ErrPermissionNotFound   = errors.New("permission not found")
-	ErrInvalidPermission    = errors.New("invalid permission format")
-	ErrPermissionDenied     = errors.New("permission denied")
+	ErrInvalidPermission = errors.New("invalid permission format")
 )
 
 // ストレージエラー生成関数
@@ -75,14 +73,6 @@ func NewGroupPermissionNotFoundError(groupName, permission string) error {
 }
 
 // 権限エラー生成関数
-func NewPermissionNotFoundError(permission string) error {
-	return fmt.Errorf("%w: '%s'", ErrPermissionNotFound, permission)
-}
-
 func NewInvalidPermissionError(permission string) error {
 	return fmt.Errorf("%w: '%s'", ErrInvalidPermission, permission)
-}
-
-func NewPermissionDeniedError(permission string) error {
-	return fmt.Errorf("%w: access to '%s' denied", ErrPermissionDenied, permission)
 }
