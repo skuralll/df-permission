@@ -28,6 +28,13 @@ var (
 	ErrGroupPermissionNotFound = errors.New("group does not have permission")
 )
 
+// 権限関連エラー
+var (
+	ErrPermissionNotFound   = errors.New("permission not found")
+	ErrInvalidPermission    = errors.New("invalid permission format")
+	ErrPermissionDenied     = errors.New("permission denied")
+)
+
 // ストレージエラー生成関数
 func NewStorageError(operation, message string) error {
 	return fmt.Errorf("%w: %s failed: %s", ErrStorage, operation, message)
@@ -65,4 +72,17 @@ func NewSystemGroupProtectedError(groupName string) error {
 
 func NewGroupPermissionNotFoundError(groupName, permission string) error {
 	return fmt.Errorf("%w: '%s' does not have permission '%s'", ErrGroupPermissionNotFound, groupName, permission)
+}
+
+// 権限エラー生成関数
+func NewPermissionNotFoundError(permission string) error {
+	return fmt.Errorf("%w: '%s'", ErrPermissionNotFound, permission)
+}
+
+func NewInvalidPermissionError(permission string) error {
+	return fmt.Errorf("%w: '%s'", ErrInvalidPermission, permission)
+}
+
+func NewPermissionDeniedError(permission string) error {
+	return fmt.Errorf("%w: access to '%s' denied", ErrPermissionDenied, permission)
 }
