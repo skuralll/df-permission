@@ -188,7 +188,7 @@ func (mgr *Manager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) 
 
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player not found")
+		return shared.ErrPlayerNotFound
 	}
 
 	// グループを探して削除
@@ -209,7 +209,7 @@ func (mgr *Manager) RemovePlayerFromGroup(playerID uuid.UUID, groupName string) 
 		}
 	}
 
-	return fmt.Errorf("player is not in group '%s'", groupName)
+	return shared.NewPlayerNotInGroupError(groupName)
 }
 
 // 指定されたパーミッションを持つ新しいパーミッショングループを作成する
@@ -367,7 +367,7 @@ func (mgr *Manager) RemovePlayer(playerID uuid.UUID) error {
 
 	// プレイヤーが存在するかチェック
 	if _, exists := mgr.players[playerID]; !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// プレイヤーデータを削除
@@ -433,7 +433,7 @@ func (mgr *Manager) CreatePlayer(playerID uuid.UUID, playerName string) error {
 
 	// プレイヤーが既に存在するかチェック
 	if _, exists := mgr.players[playerID]; exists {
-		return fmt.Errorf("player with ID %s already exists", playerID.String())
+		return shared.NewPlayerAlreadyExistsError(playerID)
 	}
 
 	// プレイヤーデータを作成
@@ -461,7 +461,7 @@ func (mgr *Manager) AddPlayerPermission(playerID uuid.UUID, permission string) e
 	// プレイヤーデータを取得または作成
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// 既に権限を持っているかチェック
@@ -495,7 +495,7 @@ func (mgr *Manager) RemovePlayerPermission(playerID uuid.UUID, permission string
 
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// 権限を探して削除
@@ -518,7 +518,7 @@ func (mgr *Manager) RemovePlayerPermission(playerID uuid.UUID, permission string
 		}
 	}
 
-	return fmt.Errorf("player does not have permission '%s'", permission)
+	return shared.NewPlayerPermissionNotFoundError(permission)
 }
 
 // プレイヤーの権限を一括設定する
@@ -528,7 +528,7 @@ func (mgr *Manager) SetPlayerPermissions(playerID uuid.UUID, permissions []strin
 
 	player, exists := mgr.players[playerID]
 	if !exists {
-		return fmt.Errorf("player with ID %s not found", playerID.String())
+		return shared.NewPlayerNotFoundError(playerID)
 	}
 
 	// 権限を置き換え
