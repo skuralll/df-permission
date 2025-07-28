@@ -35,3 +35,5 @@ go.work.sum
 # Test artifacts and temporary permission files
 permissions.json
 *.json.bak
+# Added by goreleaser init:
+dist/
