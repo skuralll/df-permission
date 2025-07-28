@@ -1,15 +1,13 @@
 # df-permission
 
-Minecraft Bedrock Edition Dragonflyサーバー向けの包括的な権限管理ライブラリです。
+Minecraft Bedrock Edition Dragonflyサーバー向けの権限管理ライブラリ
 
 ## 特徴
 
-- 🚀 **高性能**: TTL対応のキャッシュシステムによる高速な権限チェック
-- 🎯 **柔軟な権限システム**: ワイルドカード権限（`*`、`prefix.*`）をサポート
-- 👥 **グループベース管理**: 効率的なグループによる権限管理
-- 💾 **永続化対応**: JSONファイルベースのストレージ
-- 🔒 **スレッドセーフ**: 並行処理に対応した安全な実装
-- ⚙️ **柔軟な設定**: オプションパターンによるカスタマイズ可能な設定
+- **権限システム**: ワイルドカード権限（`*`、`prefix.*`）をサポート
+- **グループベース管理**: グループによる権限管理
+- **スレッドセーフ**: 並行処理に対応
+- **設定**: カスタマイズ可能
 
 ## インストール
 
@@ -125,6 +123,7 @@ if mgr.HasPermission(playerID, "world.build") {
 システム起動時に以下のグループが自動作成されます：
 
 - **default**: `["chat.send", "world.interact"]`
+  - ※ このライブラリ自体はチャットやワールド操作制限を行いません。
 - **admin**: `["*"]` (全権限)
 
 ## API リファレンス
@@ -233,8 +232,4 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルをご覧ください。
 
 ## 貢献
 
-プロジェクトへの貢献を歓迎します。バグレポートや機能リクエストは [Issues](https://github.com/skuralll/df-permission/issues) まで。
-
-## 更なる情報
-
-詳細な仕様については [docs/SPECIFICATION.md](docs/SPECIFICATION.md) をご覧ください。
+バグレポートや機能リクエストは [Issues](https://github.com/skuralll/df-permission/issues) まで。
