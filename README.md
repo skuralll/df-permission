@@ -31,6 +31,7 @@ import (
 func main() {
     // 権限マネージャーを作成（デフォルト設定）
     mgr := permission.NewManager()
+    // mgr.Save() // 初回に即時ファイル生成を行いたい場合
     
     // プレイヤーをグループに追加
     playerID := uuid.New()
