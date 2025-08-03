@@ -19,8 +19,6 @@ go get github.com/skuralll/df-permission
 
 ## クイックスタート
 
-プレイヤーの参加時に自動で権限システムに登録する機能を提供します。
-
 ```go
 package main
 
