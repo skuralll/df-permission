@@ -35,14 +35,15 @@ The project follows a clean, layered architecture pattern:
 #### 1. Public API Layer (`permission/`)
 - **Files**: `permission.go`, `options.go`, `errors.go`
 - **Purpose**: Stable public interface, error conversion, configuration options
-- **Key Interface**: `PermissionManager` (13 core methods)
+- **Key Interface**: `PermissionManager` (15 core methods)
 - **Pattern**: Facade pattern wrapping internal implementation
 
 #### 2. Application Layer (`internal/application/`)
-- **Files**: `manager.go`, `manager_test.go`
+- **Files**: `manager.go`, `manager_test.go`, `events.go`
 - **Purpose**: Business logic orchestration, transaction management, caching coordination
 - **Key Component**: `Manager` struct with full CRUD operations
 - **Features**: Auto-save, cache invalidation, concurrent access control
+- **Event Handling**: Player join/leave event processing
 
 #### 3. Domain Layer (`internal/domain/`)
 - **Files**: `checker.go`, `matcher.go`, `cache.go`, `storage.go`
@@ -241,10 +242,10 @@ All operations are thread-safe via RWMutex:
 
 ## Integration Notes
 
-### Dragonfly Server Integration
-- Located in `internal/dragonfly/command/` (currently empty)
-- Designed for integration with Dragonfly command system
+### Server Integration
+- Server-agnostic event handling via `OnPlayerJoin`/`OnPlayerLeave` methods
 - UUID-based player identification matches Minecraft standards
+- Compatible with Dragonfly, Paper, and other server implementations
 
 ### Storage Format
 - JSON file format for human readability
@@ -306,58 +307,67 @@ func WithNewFeature(value SomeType) Option {
 
 This architecture provides a solid foundation for permission management with clear separation of concerns, comprehensive testing, and excellent performance characteristics.
 
-## Dragonfly Integration - JoinHandler
+## Server Integration - Event Handling
 
-### Implementation Plan (Issue #22)
+### Player Event Handling (Issues #22, #23)
 
-**Location**: `internal/dragonfly/events/join.go`
+The library provides server-agnostic event handling methods that can be integrated with any Minecraft server implementation.
 
-**Key Constraint**: `*player.Player` objects from `server.Accept()` are only valid within the for loop scope. Cannot be passed to goroutines directly.
-
-### Safe Implementation Structure
+### Integration Methods
 
 ```go
-type JoinHandler struct {
-    permissionMgr permission.PermissionManager
-    defaultGroup  string
+// PermissionManager interface includes event handling
+type PermissionManager interface {
+    // ... existing methods ...
+    
+    // Event handling (server-agnostic)
+    OnPlayerJoin(playerID uuid.UUID, playerName string) error
+    OnPlayerLeave(playerID uuid.UUID, playerName string) error
 }
-
-func NewJoinHandler(mgr permission.PermissionManager) *JoinHandler
-
-// Takes extracted player info, not *player.Player directly
-func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) error
 ```
 
-### Integration Pattern
+### Implementation Details
+
+**Location**: `internal/application/events.go`
+
+**Key Features**:
+- **Server-Agnostic**: No dependency on specific server implementations
+- **Simple Integration**: Direct method calls in server event loops
+- **Thread-Safe**: Compatible with concurrent server operations
+
+### Dragonfly Integration Pattern
 
 ```go
-// Safe: Synchronous processing in Accept loop
+// Extract player info and call permission methods
 for p := range srv.Accept() {
-    // Extract necessary info first
     playerID := p.UUID()
     playerName := p.Name()
     
-    // Process synchronously (recommended for permission updates)
-    if err := joinHandler.HandlePlayerJoin(playerID, playerName); err != nil {
-        log.Printf("Join handler error: %v", err)
+    // Handle player join
+    if err := permissionMgr.OnPlayerJoin(playerID, playerName); err != nil {
+        log.Printf("Permission join error: %v", err)
     }
     
-    // Set up player handlers
-    p.Handle(MyHandler{permissionMgr: mgr})
+    // Set up custom handlers (no conflict with permission system)
+    p.Handle(MyCustomHandler{permissionMgr: permissionMgr})
 }
 ```
 
-### Core Functions
+### Event Processing
 
-- `registerNewPlayer(uuid.UUID, string)` - Auto-register new players
-- `assignDefaultGroup(uuid.UUID)` - Add to default group
-- `updatePlayerName(uuid.UUID, string)` - Handle name changes
-- `isFirstTimeJoin(uuid.UUID)` - First-time join detection
-- `handleFirstTimeJoin(uuid.UUID)` - First-time processing
+#### OnPlayerJoin
+- **Player Registration**: Auto-register new players (existing players ignored)
+- **Name Updates**: Handle player name changes for existing players
+- **Error Handling**: Graceful handling of duplicate players
 
-### Features
+#### OnPlayerLeave  
+- **Cache Cleanup**: Clear player-specific cached permission results
+- **Memory Management**: Prevent memory leaks from disconnected players
+- **Performance**: Fast, non-blocking cleanup operations
 
-- **Thread-Safe**: Works with existing PermissionManager concurrency
-- **Non-Blocking**: Fast synchronous operations don't block Accept loop
-- **Error-Resilient**: Join failures don't prevent player connection
-- **Dragonfly-Compatible**: Respects player object lifetime constraints
+### Benefits
+
+- **Non-Invasive**: Doesn't occupy server handler slots
+- **Flexible**: Works with any server implementation
+- **Simple**: Direct method calls, no complex handler management
+- **Compatible**: Allows other libraries to use handlers freely
