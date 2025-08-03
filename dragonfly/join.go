@@ -14,6 +14,7 @@ type joinHandler struct {
 	internal *events.JoinHandler
 }
 
+// プレイヤー参加イベントのための公開インターフェース
 func NewJoinHandler(mgr permission.PermissionManager, defaultGroup string) JoinHandler {
 	return &joinHandler{
 		internal: events.NewJoinHandler(mgr, defaultGroup),
