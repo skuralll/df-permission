@@ -21,6 +21,7 @@ func NewJoinHandler(mgr permission.PermissionManager, defaultGroup string) JoinH
 	}
 }
 
+// プレイヤー参加時の処理を実行
 func (h *joinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) error {
 	return h.internal.HandlePlayerJoin(playerID, playerName)
 }

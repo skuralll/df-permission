@@ -19,18 +19,41 @@ go get github.com/skuralll/df-permission
 
 ## クイックスタート
 
+プレイヤーの参加時に自動で権限システムに登録する機能を提供します。
+
 ```go
 package main
 
 import (
-    "github.com/google/uuid"
-    "github.com/skuralll/df-permission/permission"
+    "log"
+    
+    "github.com/df-mc/dragonfly/server"
+    "github.com/skuralll/df-permission/permission" 
+    "github.com/skuralll/df-permission/dragonfly"
 )
 
 func main() {
-    // 権限マネージャーを作成（デフォルト設定）
+    // 権限マネージャーを作成
     mgr := permission.NewManager()
     
+    // オプション: 参加ハンドラーを作成
+    joinHandler := dragonfly.NewJoinHandler(mgr, "default")
+    
+    // Dragonflyサーバーを設定...
+    srv := server.New(nil, "logs")
+    
+    // サーバーの受け入れループ
+    for p := range srv.Accept() {
+        playerID := p.UUID()
+        playerName := p.Name()
+        
+        // オプション: プレイヤー参加処理（自動登録、デフォルトグループ追加、名前更新）
+        if err := joinHandler.HandlePlayerJoin(playerID, playerName); err != nil {
+            log.Printf("Join handler error: %v", err)
+        }
+    }
+
+    /* API使用例 */
     // プレイヤーをグループに追加
     playerID := uuid.New()
     mgr.AddPlayerToGroup(playerID, "Steve", "admin")
@@ -44,31 +67,7 @@ func main() {
     // データを保存
     mgr.Save()
 }
-```
 
-## Dragonfly統合
-
-プレイヤーの参加時に自動で権限システムに登録する機能を提供します。
-
-```go
-import (
-    "github.com/skuralll/df-permission/internal/dragonfly/events"
-)
-
-// 参加ハンドラーを作成
-mgr := permission.NewManager(permission.WithAutoSave(true))
-joinHandler := events.NewJoinHandler(mgr, "default")
-
-// サーバーの受け入れループ
-for p := range srv.Accept() {
-    playerID := p.UUID()
-    playerName := p.Name()
-    
-    // プレイヤー参加処理
-    if err := joinHandler.HandlePlayerJoin(playerID, playerName); err != nil {
-        log.Printf("Join handler error: %v", err)
-    }
-}
 ```
 
 ## 詳細な使用例
@@ -107,8 +106,14 @@ err = mgr.DeleteGroup("vip")
 ```go
 playerID := uuid.New()
 
+// プレイヤーを作成
+err := mgr.CreatePlayer(playerID, "PlayerName")
+
+// プレイヤー名を更新
+err = mgr.UpdatePlayerName(playerID, "NewPlayerName")
+
 // プレイヤーをグループに追加
-err := mgr.AddPlayerToGroup(playerID, "PlayerName", "vip")
+err = mgr.AddPlayerToGroup(playerID, "PlayerName", "vip")
 
 // 個人権限を追加
 err = mgr.AddPlayerPermission(playerID, "custom.permission")
