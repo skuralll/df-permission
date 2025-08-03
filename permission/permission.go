@@ -13,6 +13,7 @@ type PermissionManager interface {
 
 	// プレイヤー管理
 	CreatePlayer(playerID uuid.UUID, playerName string) error
+	UpdatePlayerName(playerID uuid.UUID, newName string) error
 
 	// グループ管理
 	CreateGroup(name string, permissions []string) error
@@ -62,6 +63,10 @@ func (p *permissionManager) HasPermission(playerID uuid.UUID, permission string)
 // 既に存在する場合はエラー
 func (p *permissionManager) CreatePlayer(playerID uuid.UUID, playerName string) error {
 	return p.internal.CreatePlayer(playerID, playerName)
+}
+
+func (p *permissionManager) UpdatePlayerName(playerID uuid.UUID, newName string) error {
+	return p.internal.UpdatePlayerName(playerID, newName)
 }
 
 // 指定した権限で新しいグループを作成

@@ -462,6 +462,29 @@ func (mgr *Manager) CreatePlayer(playerID uuid.UUID, playerName string) error {
 	return nil
 }
 
+func (mgr *Manager) UpdatePlayerName(playerID uuid.UUID, newName string) error {
+	mgr.mutex.Lock()
+	defer mgr.mutex.Unlock()
+
+	player, exists := mgr.players[playerID]
+	if !exists {
+		return shared.NewPlayerNotFoundError(playerID)
+	}
+
+	if player.PlayerName == newName {
+		return nil
+	}
+
+	player.PlayerName = newName
+	player.UpdatedAt = time.Now()
+
+	if mgr.autoSave {
+		go mgr.Save()
+	}
+
+	return nil
+}
+
 // プレイヤーに個別権限を追加する
 func (mgr *Manager) AddPlayerPermission(playerID uuid.UUID, permission string) error {
 	mgr.mutex.Lock()

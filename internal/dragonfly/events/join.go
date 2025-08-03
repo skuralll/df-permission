@@ -2,7 +2,6 @@ package events
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/skuralll/df-permission/internal/shared"
@@ -14,10 +13,10 @@ type JoinHandler struct {
 	defaultGroup  string
 }
 
-func NewJoinHandler(mgr permission.PermissionManager) *JoinHandler {
+func NewJoinHandler(mgr permission.PermissionManager, defaultGroup string) *JoinHandler {
 	return &JoinHandler{
 		permissionMgr: mgr,
-		defaultGroup:  "default",
+		defaultGroup:  defaultGroup,
 	}
 }
 
@@ -31,7 +30,7 @@ func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) er
 	}
 
 	if err := h.updatePlayerName(playerID, playerName); err != nil {
-		return fmt.Errorf("failed to update player name: %w", err)
+		return err
 	}
 
 	return nil
@@ -51,5 +50,10 @@ func (h *JoinHandler) assignDefaultGroup(playerID uuid.UUID, playerName string) 
 }
 
 func (h *JoinHandler) updatePlayerName(playerID uuid.UUID, playerName string) error {
-	panic("unimplemented")
+	if err := h.permissionMgr.UpdatePlayerName(playerID, playerName); err != nil {
+		if !errors.Is(err, shared.ErrPlayerNotFound) {
+			return err
+		}
+	}
+	return nil
 }
