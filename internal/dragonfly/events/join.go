@@ -20,6 +20,7 @@ func NewJoinHandler(mgr permission.PermissionManager, defaultGroup string) *Join
 	}
 }
 
+// プレイヤーが参加したときの処理
 func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) error {
 	if err := h.registerNewPlayer(playerID, playerName); err != nil {
 		return err
@@ -36,6 +37,7 @@ func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) er
 	return nil
 }
 
+// 新しいプレイヤーを登録
 func (h *JoinHandler) registerNewPlayer(playerID uuid.UUID, playerName string) error {
 	if err := h.permissionMgr.CreatePlayer(playerID, playerName); err != nil {
 		if !errors.Is(err, shared.ErrPlayerAlreadyExists) {
@@ -45,7 +47,12 @@ func (h *JoinHandler) registerNewPlayer(playerID uuid.UUID, playerName string) e
 	return nil
 }
 
+// デフォルトグループにプレイヤーを追加
 func (h *JoinHandler) assignDefaultGroup(playerID uuid.UUID, playerName string) error {
+	if h.defaultGroup == "" {
+		return nil // デフォルトグループが設定されていない場合は何もしない
+	}
+	// プレイヤーをデフォルトグループに追加
 	return h.permissionMgr.AddPlayerToGroup(playerID, playerName, h.defaultGroup)
 }
 
