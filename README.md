@@ -25,13 +25,11 @@ package main
 import (
     "github.com/google/uuid"
     "github.com/skuralll/df-permission/permission"
-    "time"
 )
 
 func main() {
     // 権限マネージャーを作成（デフォルト設定）
     mgr := permission.NewManager()
-    // mgr.Save() // 初回に即時ファイル生成を行いたい場合
     
     // プレイヤーをグループに追加
     playerID := uuid.New()
@@ -45,6 +43,31 @@ func main() {
     
     // データを保存
     mgr.Save()
+}
+```
+
+## Dragonfly統合
+
+プレイヤーの参加時に自動で権限システムに登録する機能を提供します。
+
+```go
+import (
+    "github.com/skuralll/df-permission/internal/dragonfly/events"
+)
+
+// 参加ハンドラーを作成
+mgr := permission.NewManager(permission.WithAutoSave(true))
+joinHandler := events.NewJoinHandler(mgr, "default")
+
+// サーバーの受け入れループ
+for p := range srv.Accept() {
+    playerID := p.UUID()
+    playerName := p.Name()
+    
+    // プレイヤー参加処理
+    if err := joinHandler.HandlePlayerJoin(playerID, playerName); err != nil {
+        log.Printf("Join handler error: %v", err)
+    }
 }
 ```
 
@@ -135,6 +158,10 @@ if mgr.HasPermission(playerID, "world.build") {
 type PermissionManager interface {
     // 権限チェック
     HasPermission(playerID uuid.UUID, permission string) bool
+    
+    // プレイヤー管理
+    CreatePlayer(playerID uuid.UUID, playerName string) error
+    UpdatePlayerName(playerID uuid.UUID, newName string) error
     
     // グループ管理
     CreateGroup(name string, permissions []string) error
