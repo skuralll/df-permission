@@ -305,3 +305,59 @@ func WithNewFeature(value SomeType) Option {
 - **Standard library only** - No external dependencies for core functionality
 
 This architecture provides a solid foundation for permission management with clear separation of concerns, comprehensive testing, and excellent performance characteristics.
+
+## Dragonfly Integration - JoinHandler
+
+### Implementation Plan (Issue #22)
+
+**Location**: `internal/dragonfly/events/join.go`
+
+**Key Constraint**: `*player.Player` objects from `server.Accept()` are only valid within the for loop scope. Cannot be passed to goroutines directly.
+
+### Safe Implementation Structure
+
+```go
+type JoinHandler struct {
+    permissionMgr permission.PermissionManager
+    defaultGroup  string
+}
+
+func NewJoinHandler(mgr permission.PermissionManager) *JoinHandler
+
+// Takes extracted player info, not *player.Player directly
+func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) error
+```
+
+### Integration Pattern
+
+```go
+// Safe: Synchronous processing in Accept loop
+for p := range srv.Accept() {
+    // Extract necessary info first
+    playerID := p.UUID()
+    playerName := p.Name()
+    
+    // Process synchronously (recommended for permission updates)
+    if err := joinHandler.HandlePlayerJoin(playerID, playerName); err != nil {
+        log.Printf("Join handler error: %v", err)
+    }
+    
+    // Set up player handlers
+    p.Handle(MyHandler{permissionMgr: mgr})
+}
+```
+
+### Core Functions
+
+- `registerNewPlayer(uuid.UUID, string)` - Auto-register new players
+- `assignDefaultGroup(uuid.UUID)` - Add to default group
+- `updatePlayerName(uuid.UUID, string)` - Handle name changes
+- `isFirstTimeJoin(uuid.UUID)` - First-time join detection
+- `handleFirstTimeJoin(uuid.UUID)` - First-time processing
+
+### Features
+
+- **Thread-Safe**: Works with existing PermissionManager concurrency
+- **Non-Blocking**: Fast synchronous operations don't block Accept loop
+- **Error-Resilient**: Join failures don't prevent player connection
+- **Dragonfly-Compatible**: Respects player object lifetime constraints

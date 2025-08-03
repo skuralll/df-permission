@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -149,6 +150,46 @@ func TestPlayerManagement(t *testing.T) {
 
 	if mgr.PlayerExists(playerID) {
 		t.Error("Player should not exist after removal")
+	}
+}
+
+func TestManager_UpdatePlayerName(t *testing.T) {
+	defer cleanup()
+	mgr := createTestManager()
+	playerID := uuid.New()
+
+	err := mgr.CreatePlayer(playerID, "OriginalName")
+	if err != nil {
+		t.Fatalf("Failed to create player: %v", err)
+	}
+
+	err = mgr.UpdatePlayerName(playerID, "UpdatedName")
+	if err != nil {
+		t.Fatalf("Failed to update player name: %v", err)
+	}
+
+	player := mgr.GetPlayerData(playerID)
+	if player == nil {
+		t.Fatal("Player data should not be nil")
+	}
+
+	if player.PlayerName != "UpdatedName" {
+		t.Errorf("Expected player name 'UpdatedName', got '%s'", player.PlayerName)
+	}
+
+	err = mgr.UpdatePlayerName(playerID, "UpdatedName")
+	if err != nil {
+		t.Fatalf("Updating with same name should not fail: %v", err)
+	}
+
+	nonExistentPlayerID := uuid.New()
+	err = mgr.UpdatePlayerName(nonExistentPlayerID, "NewName")
+	if err == nil {
+		t.Error("Updating non-existent player should fail")
+	}
+
+	if err != nil && !errors.Is(err, shared.ErrPlayerNotFound) {
+		t.Errorf("Expected PlayerNotFoundError, got %T: %v", err, err)
 	}
 }
 
