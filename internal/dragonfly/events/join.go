@@ -26,8 +26,8 @@ func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) er
 		return err
 	}
 
-	if err := h.assignDefaultGroup(playerID); err != nil {
-		return fmt.Errorf("failed to assign default group: %w", err)
+	if err := h.assignDefaultGroup(playerID, playerName); err != nil {
+		return err
 	}
 
 	if h.isFirstTimeJoin(playerID) {
@@ -50,8 +50,8 @@ func (h *JoinHandler) registerNewPlayer(playerID uuid.UUID, playerName string) e
 	return nil
 }
 
-func (h *JoinHandler) assignDefaultGroup(playerID uuid.UUID) error {
-	panic("unimplemented")
+func (h *JoinHandler) assignDefaultGroup(playerID uuid.UUID, playerName string) error {
+	return h.permissionMgr.AddPlayerToGroup(playerID, playerName, h.defaultGroup)
 }
 
 func (h *JoinHandler) isFirstTimeJoin(playerID uuid.UUID) bool {
