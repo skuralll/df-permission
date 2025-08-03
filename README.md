@@ -26,16 +26,13 @@ import (
     "log"
     
     "github.com/df-mc/dragonfly/server"
-    "github.com/skuralll/df-permission/permission" 
-    "github.com/skuralll/df-permission/dragonfly"
+    "github.com/google/uuid"
+    "github.com/skuralll/df-permission/permission"
 )
 
 func main() {
     // 権限マネージャーを作成
     mgr := permission.NewManager()
-    
-    // オプション: 参加ハンドラーを作成
-    joinHandler := dragonfly.NewJoinHandler(mgr, "default")
     
     // Dragonflyサーバーを設定...
     srv := server.New(nil, "logs")
@@ -45,10 +42,15 @@ func main() {
         playerID := p.UUID()
         playerName := p.Name()
         
-        // オプション: プレイヤー参加処理（自動登録、デフォルトグループ追加、名前更新）
-        if err := joinHandler.HandlePlayerJoin(playerID, playerName); err != nil {
-            log.Printf("Join handler error: %v", err)
+        // プレイヤー参加処理（自動登録、名前更新）
+        if err := mgr.OnPlayerJoin(playerID, playerName); err != nil {
+            log.Printf("Permission join error: %v", err)
         }
+        
+        // プレイヤー退出時の処理は、カスタムハンドラーで実装
+        p.Handle(&MyHandler{
+            permissionMgr: mgr,
+        })
     }
 
     /* API使用例 */
@@ -66,6 +68,24 @@ func main() {
     mgr.Save()
 }
 
+// カスタムハンドラーの例
+type MyHandler struct {
+    player.NopHandler
+    permissionMgr permission.PermissionManager
+}
+
+func (h *MyHandler) HandleQuit(p *player.Player) {
+    // プレイヤー退出時のクリーンアップ
+    h.permissionMgr.OnPlayerLeave(p.UUID(), p.Name())
+}
+
+func (h *MyHandler) HandleChat(ctx *player.Context, message *string) {
+    // チャット権限チェックの例
+    if !h.permissionMgr.HasPermission(ctx.Player().UUID(), "chat.send") {
+        ctx.Cancel() // チャットをキャンセル
+        return
+    }
+}
 ```
 
 ## 詳細な使用例
@@ -104,8 +124,8 @@ err = mgr.DeleteGroup("vip")
 ```go
 playerID := uuid.New()
 
-// プレイヤーを作成
-err := mgr.CreatePlayer(playerID, "PlayerName")
+// プレイヤー参加時の処理（自動登録と名前更新）
+err := mgr.OnPlayerJoin(playerID, "PlayerName")
 
 // プレイヤー名を更新
 err = mgr.UpdatePlayerName(playerID, "NewPlayerName")
@@ -121,6 +141,9 @@ err = mgr.SetPlayerPermissions(playerID, []string{"perm1", "perm2"})
 
 // プレイヤーの権限を取得
 permissions := mgr.GetPlayerPermissions(playerID)
+
+// プレイヤー退出時のクリーンアップ
+err = mgr.OnPlayerLeave(playerID, "PlayerName")
 ```
 
 ### 権限チェック
@@ -187,6 +210,10 @@ type PermissionManager interface {
     
     // システム操作
     Save() error
+    
+    // イベントハンドリング
+    OnPlayerJoin(playerID uuid.UUID, playerName string) error
+    OnPlayerLeave(playerID uuid.UUID, playerName string) error
 }
 ```
 

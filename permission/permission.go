@@ -36,6 +36,10 @@ type PermissionManager interface {
 
 	// システム操作
 	Save() error
+
+	// イベントハンドリング
+	OnPlayerJoin(playerID uuid.UUID, playerName string) error
+	OnPlayerLeave(playerID uuid.UUID, playerName string) error
 }
 
 // internal.Managerの具体的実装
@@ -139,4 +143,14 @@ func (p *permissionManager) GetPlayerPermissions(playerID uuid.UUID) []string {
 // 現在の権限データをストレージに保存
 func (p *permissionManager) Save() error {
 	return p.internal.Save()
+}
+
+// プレイヤー参加時の処理
+func (p *permissionManager) OnPlayerJoin(playerID uuid.UUID, playerName string) error {
+	return p.internal.OnPlayerJoin(playerID, playerName)
+}
+
+// プレイヤー退出時の処理
+func (p *permissionManager) OnPlayerLeave(playerID uuid.UUID, playerName string) error {
+	return p.internal.OnPlayerLeave(playerID, playerName)
 }
