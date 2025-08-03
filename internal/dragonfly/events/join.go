@@ -30,10 +30,6 @@ func (h *JoinHandler) HandlePlayerJoin(playerID uuid.UUID, playerName string) er
 		return err
 	}
 
-	if h.isFirstTimeJoin(playerID) {
-		h.handleFirstTimeJoin(playerID)
-	}
-
 	if err := h.updatePlayerName(playerID, playerName); err != nil {
 		return fmt.Errorf("failed to update player name: %w", err)
 	}
@@ -52,14 +48,6 @@ func (h *JoinHandler) registerNewPlayer(playerID uuid.UUID, playerName string) e
 
 func (h *JoinHandler) assignDefaultGroup(playerID uuid.UUID, playerName string) error {
 	return h.permissionMgr.AddPlayerToGroup(playerID, playerName, h.defaultGroup)
-}
-
-func (h *JoinHandler) isFirstTimeJoin(playerID uuid.UUID) bool {
-	panic("unimplemented")
-}
-
-func (h *JoinHandler) handleFirstTimeJoin(playerID uuid.UUID) {
-	panic("unimplemented")
 }
 
 func (h *JoinHandler) updatePlayerName(playerID uuid.UUID, playerName string) error {
